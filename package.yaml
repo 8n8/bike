@@ -1,0 +1,25 @@
+name: controlsim
+version: 1.0.0
+synopsis: read the README
+maintainer: 5-o
+license: AllRightsReserved
+
+ghc-options: -Wall -O2
+
+dependencies:
+  - base >= 4.7 && < 5
+
+executables:
+  bikesim:
+    main: Main.hs
+    source-dirs: src
+
+tests:
+  spec:
+    main: Test.hs
+    source-dirs:
+      - test
+      - src
+    dependencies:
+      - tasty
+      - tasty-hunit
