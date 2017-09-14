@@ -10,7 +10,7 @@ dependencies:
   - base >= 4.7 && < 5
 
 executables:
-  bikesim:
+  bikeController:
     main: Main.hs
     source-dirs: src
 
