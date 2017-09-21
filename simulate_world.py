@@ -1,8 +1,11 @@
 import math as m
-import numpy as np
+import numpy as np  # type: ignore
+from typing import (Dict, Any, Union, List, Tuple)
 
 
-def calculate_sensor_readings(world_state):
+def calculate_sensor_readings(
+        world_state: Dict[str, Any]
+        ) -> Dict[str, Union[float, Dict[str, Any]]]:
     """
     Given the state of the simulated world, it works out what the
     sensor readings should be.
@@ -37,7 +40,11 @@ def calculate_sensor_readings(world_state):
             'y': world_state['y']}}
 
 
-def camera_properties(x, y, orientation):
+def camera_properties(
+        x: float,
+        y: float,
+        orientation: float
+        ) -> Dict[str, Dict[str, float]]:
     """
     It is assumed that the cameras are all attached at the same point
     on the frame of the bike.
@@ -49,7 +56,11 @@ def camera_properties(x, y, orientation):
         'right': generic_cam(orientation - m.pi/2, x, y)}
 
 
-def generic_cam(alpha, x, y):
+def generic_cam(
+        alpha: float,
+        x: float,
+        y: float
+        ) -> Dict[str, float]:
     return {
         'x': x,
         'y': y,
@@ -58,20 +69,28 @@ def generic_cam(alpha, x, y):
         'alpha': alpha}
 
 
-def calculate_images(obstacles, x, y, orientation):
+def calculate_images(
+        obstacles: List[Dict[str, float]],
+        x: float,
+        y: float,
+        orientation: float
+        ) -> Dict[str, Any]:
     """
     It calculates the image seen by each camera given the list of
     obstacles in the simulated world and the position and orientation
     of the cameras.  Each camera has a viewing angle of 90 degrees
     and there are four of them back-to-back to view 360 degrees.
     """
-    cams = camera_properties(x, y, orientation)
+    cams: Dict[str, Dict[str, float]] = camera_properties(
+        x, y, orientation)
     return {
         k: image_of_all_visible_obstacles(cam_spec, obstacles)
-        for k, cam_spec in cams.items}
+        for k, cam_spec in cams.items()}
 
 
-def image_of_all_visible_obstacles(cam_spec, obstacle_list):
+def image_of_all_visible_obstacles(
+        cam_spec: Dict[str, float],
+        obstacle_list: List[Dict[str, float]]): 
     """
     It makes an image of all the obstacles that are in the view of
     the camera.  The parameters describing the camera are contained
@@ -96,7 +115,8 @@ def convert_thin_image_to_thick(thin_im):
     return as_uint8 * 255
 
 
-def make_thin_composite_image(image_parameter_list):
+def make_thin_composite_image(
+        image_parameter_list: List[Dict[str, float]]):
     """
     It makes an array of bools, representing the image of all the
     obstacles seen by the camera.  The input is a list of dictionaries,
@@ -111,7 +131,7 @@ def make_thin_composite_image(image_parameter_list):
     return im
 
 
-def make_thin_image(x, y):
+def make_thin_image(x: float, y: float):
     """
     It makes an array of bools, representing the image of the obstacle
     in the camera.  Since the simulated world is black and white and
@@ -126,7 +146,10 @@ def make_thin_image(x, y):
         np.ones(100 - x - y, dtype=bool))
 
 
-def _obstacle_image_parameters(cam, obs):
+def _obstacle_image_parameters(
+        cam: Dict[str, float],
+        obs: Dict[str, float]
+        ) -> Dict[str, float]:
     """
     It takes in the position and orientation of a camera, and the
     position of an obstacle and calculates the parameters needed to
@@ -136,11 +159,11 @@ def _obstacle_image_parameters(cam, obs):
     x and y (shown on the diagram).
     """
     A, B, C, D = flatten_points(calculate_ABCD_coords(cam, obs))
-    z = width_of_camera_lens(cam)
-    x = 0
+    z: float = width_of_camera_lens(cam)
+    x: float = 0
     if B > 0:
         x = min(z, B)
-    y = 0
+    y: float = 0
     if D - C < 0:
         y = min(z, D - B)
     else:
@@ -150,15 +173,24 @@ def _obstacle_image_parameters(cam, obs):
         'y': y / z}
 
 
-def width_of_camera_lens(cam):
+def width_of_camera_lens(
+        cam: Dict[str, float]
+        ) -> float:
     """
     It calculates the width of the camera lens.  See page 6 of
     ./simulateTrig.pdf for details.
     """
-    return 2 * cam['k'] * m.arctan(cam['theta'] / 2)
+    return 2 * cam['k'] * m.atan(cam['theta'] / 2)
 
 
-def calculate_ABCD_coords(cam, obs):
+Point = Dict[str, float]
+FourPoint = Tuple[Point, Point, Point, Point]
+
+
+def calculate_ABCD_coords(
+        cam: Dict[str, float],
+        obs: Dict[str, float]
+        ) -> FourPoint:
     """
     It calculates the coordinates of the points A, B, C and D, which
     are points along the lens-line of the camera.  They are shown on
@@ -171,7 +203,9 @@ def calculate_ABCD_coords(cam, obs):
         _calculate_D(cam))
 
 
-def flatten_points(A, B, C, D):
+def flatten_points(
+        points: FourPoint
+        ) -> Tuple[float, float, float, float]:
     """
     A, B, C and D are dictionaries, each containing 'x' and 'y' fields.
     These describe 2D Cartesian coordinates.  A, B, C and D are all on
@@ -179,15 +213,16 @@ def flatten_points(A, B, C, D):
     by treating the common line as a real number line with A at 0 and
     D on the positive side of A.
     """
-    def flatten(point):
+    A, B, C, D = points
+    def flatten(point: Point) -> float:
         return _compare_to_AD(A, D, point)
-    Bflat = flatten(B)
-    Cflat = flatten(C)
-    Dflat = flatten(D)
-    return 0, Bflat, Cflat, Dflat
+    Bflat: float = flatten(B)
+    Cflat: float = flatten(C)
+    Dflat: float = flatten(D)
+    return 0.0, Bflat, Cflat, Dflat
 
 
-def _compare_to_AD(A, D, X):
+def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
     """
     Each of the inputs contains two coordinates describing a point in
     a 2D Cartesian coordinate system.  All three points are on the same
@@ -204,14 +239,14 @@ def _compare_to_AD(A, D, X):
     positions it on the x-axis.  Then the y-coordinates of A, B, C and
     D can be ignored and the x-coordinates are used as the number line.
     """
-    gradient = (D['y'] - A['y']) / (D['x'] - A['x'])
-    y_intercept = A['y'] - gradient * A['x']
-    angle = m.arctan(gradient)
+    gradient: float = (D['y'] - A['y']) / (D['x'] - A['x'])
+    y_intercept: float = A['y'] - gradient * A['x']
+    angle: float = m.atan(gradient)
     rotation = np.array([
         [m.cos(angle), m.sin(angle)],
         [-m.sin(angle), m.cos(angle)]])
 
-    def flatten(p):
+    def flatten(p: Point):
         return np.matmul(
             rotation,
             np.array([[p['x']], [p['y'] - y_intercept]]))[0][0]
@@ -220,7 +255,11 @@ def _compare_to_AD(A, D, X):
     return Xnew - Anew
 
 
-def _flipsign(Aflat, Dflat, Xflat):
+def _flipsign(
+        Aflat: float,
+        Dflat: float,
+        Xflat: float
+        ) -> Tuple[float, float]:
     """
     Aflat is supposed to be less than Dflat on the real number line
     defined by them.  Xflat is another point on the number line.  This
@@ -232,71 +271,83 @@ def _flipsign(Aflat, Dflat, Xflat):
         return -Aflat, -Xflat
 
 
-def _calculate_A(cam):
+def _calculate_A(
+        cam: Dict[str, float]
+        ) -> Dict[str, float]:
     """
     It calculates the position of the left-hand side of the camera
     lens.  See diagram and workings in ./simulatorTrig.pdf.
     """
-    p = cam['k'] / (m.cos(cam['theta'] / 2))
-    beta = m.pi - (cam['theta'] / 2) - cam['alpha']
-    x1 = p * m.cos(beta)
-    x2 = p * m.sin(beta)
+    p: float = cam['k'] / (m.cos(cam['theta'] / 2))
+    beta: float = m.pi - (cam['theta'] / 2) - cam['alpha']
+    x1: float = p * m.cos(beta)
+    x2: float = p * m.sin(beta)
     return {
         'x': cam['x'] - x1,
         'y': cam['y'] + x2}
 
 
-def _calculate_B(cam, obs):
+def _calculate_B(
+        cam: Dict[str, float],
+        obs: Dict[str, float]
+        ) -> Dict[str, float]:
     """
     It calculates the position of the intercept of the left-hand
     view-line of the obstacle and the lens line.  See diagram and
     workings in ./simulateTrig.pdf.
     """
-    z = ((obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5
-    phi1 = m.arctan((obs['y'] - cam['y']) / (obs['x'] - cam['x']))
-    phi2 = m.arcsin(obs['radius'] / z)
-    phi = phi1 + phi2
-    u = cam['alpha'] - phi
-    d1 = cam['k'] * m.tan(u)
-    s = (cam['k']**2 + d1**2)**0.5
-    x2 = s * m.cos(cam['alpha'])
-    x3 = s * m.sin(cam['alpha'])
+    z: float = (
+        ((obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5)
+    phi1: float = m.atan((obs['y'] - cam['y']) / (obs['x'] - cam['x']))
+    phi2: float = m.asin(obs['radius'] / z)
+    phi: float = phi1 + phi2
+    u: float = cam['alpha'] - phi
+    d1: float = cam['k'] * m.tan(u)
+    s: float = (cam['k']**2 + d1**2)**0.5
+    x2: float = s * m.cos(cam['alpha'])
+    x3: float = s * m.sin(cam['alpha'])
     return {
         'x': cam['x'] + x2,
         'y': cam['y'] + x3}
 
 
-def _calculate_C(cam, obs):
+def _calculate_C(
+        cam: Dict[str, float],
+        obs: Dict[str, float],
+        ) -> Dict[str, float]:
     """
     It calculates the position of the intercept of the right-hand
     view-line of the obstacle and the lens line.  See diagram and
     workings in ./simulateTrig.pdf.
     """
-    x1 = ((obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5
-    x2 = (x1**2 - obs['radius']**2)**0.5
-    phi2 = m.arcsin(obs['radius'] / x2)
-    x5 = obs['y'] - cam['y']
-    phi5 = m.arcsin(x5 / x1)
-    phi1 = phi5 - phi2
-    phi3 = cam['alpha'] - phi5
-    phi4 = phi2 + phi3
-    s = cam['k'] / m.cos(phi4)
-    x3 = s * m.cos(phi1)
-    x4 = s * m.sin(phi1)
+    x1: float = (
+        (obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5
+    x2: float = (x1**2 - obs['radius']**2)**0.5
+    phi2: float = m.asin(obs['radius'] / x2)
+    x5: float = obs['y'] - cam['y']
+    phi5: float = m.asin(x5 / x1)
+    phi1: float = phi5 - phi2
+    phi3: float = cam['alpha'] - phi5
+    phi4: float = phi2 + phi3
+    s: float = cam['k'] / m.cos(phi4)
+    x3: float = s * m.cos(phi1)
+    x4: float = s * m.sin(phi1)
     return {
         'x': cam['x'] + x3,
         'y': cam['y'] + x4}
 
 
-def _calculate_D(cam):
+def _calculate_D(
+        cam: Dict[str, float]
+        ) -> Dict[str, float]:
     """
     It calculates the position of the right-hand end of the camera
     lens.
     """
-    p = cam['k'] / m.cos(cam['theta'] / 2)
-    beta = cam['alpha'] - (cam['theta'] / 2)
-    a = p * m.cos(beta)
-    b = p * m.sin(beta)
+    p: float = cam['k'] / m.cos(cam['theta'] / 2)
+    beta: float = cam['alpha'] - (cam['theta'] / 2)
+    a: float = p * m.cos(beta)
+    b: float = p * m.sin(beta)
     return {
         'x': cam['x'] + a,
         'y': cam['y'] + b}
