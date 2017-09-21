@@ -14,7 +14,7 @@ def world1():
         'steer': 0 }
 
 def readings1():
-    white_image = 255 * np.ones((100, 100), dtype=uint8)
+    white_image = 255 * np.ones((100, 100, 3), dtype=uint8)
     set_of_white_images = {
         '0.1': white_image,
         '0.3': white_image,
@@ -22,10 +22,11 @@ def readings1():
         '2.7': white_image,
         '8.1': white_image }
     return {
-        'front cam': set_of_white_images,
-        'left cam': set_of_white_images,
-        'right cam': set_of_white_images,
-        'back cam': set_of_white_images,
+        'cameras': {
+            'front': set_of_white_images,
+            'left': set_of_white_images,
+            'right': set_of_white_images,
+            'back': set_of_white_images},
         'lean acceleration': 0,
         'steer': 0,
         'velocity': 0,
