@@ -1,5 +1,5 @@
 import math as m
-import numpy as np  # type: ignore
+import numpy as np
 from typing import (Dict, Any, Union, List, Tuple)
 
 
@@ -52,7 +52,7 @@ def camera_properties(
     return {
         'front': generic_cam(orientation, x, y),
         'left': generic_cam(orientation + m.pi/2, x, y),
-        'rear': generic_cam(orientation + m.pi, x, y),
+        'back': generic_cam(orientation + m.pi, x, y),
         'right': generic_cam(orientation - m.pi/2, x, y)}
 
 
@@ -90,7 +90,7 @@ def calculate_images(
 
 def image_of_all_visible_obstacles(
         cam_spec: Dict[str, float],
-        obstacle_list: List[Dict[str, float]]): 
+        obstacle_list: List[Dict[str, float]]):
     """
     It makes an image of all the obstacles that are in the view of
     the camera.  The parameters describing the camera are contained
@@ -111,7 +111,7 @@ def convert_thin_image_to_thick(thin_im):
     """
     with_height = np.stack((thin_im for _ in range(100)), axis=1)
     with_rgb = np.stack((with_height for _ in range(3)), axis=2)
-    as_uint8 = with_rgb.ndarray.astype(uint8)  # NOQA
+    as_uint8 = with_rgb.astype(np.uint8)
     return as_uint8 * 255
 
 
@@ -140,10 +140,10 @@ def make_thin_image(x: float, y: float):
     RGB image later.  Clear space is represented by ones and obstacles
     by zeros.
     """
-    return np.concatenate(
-        np.ones(x, dtype=bool),
-        np.zeros(y, dtype=bool),
-        np.ones(100 - x - y, dtype=bool))
+    return np.concatenate(  # type: ignore
+        np.ones(int(x), dtype=bool),
+        np.zeros(int(y), dtype=bool),
+        np.ones(int(100 - x - y), dtype=bool))
 
 
 def _obstacle_image_parameters(
@@ -214,6 +214,7 @@ def flatten_points(
     D on the positive side of A.
     """
     A, B, C, D = points
+
     def flatten(point: Point) -> float:
         return _compare_to_AD(A, D, point)
     Bflat: float = flatten(B)
@@ -247,7 +248,7 @@ def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
         [-m.sin(angle), m.cos(angle)]])
 
     def flatten(p: Point):
-        return np.matmul(
+        return np.matmul(  # type: ignore
             rotation,
             np.array([[p['x']], [p['y'] - y_intercept]]))[0][0]
 
