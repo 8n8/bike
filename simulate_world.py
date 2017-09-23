@@ -175,8 +175,11 @@ def _convert_thin_image_to_thick(
     RGB image.  Ones are white, zeros are black.  The original array
     is stretched vertically.
     """
+    # The transpose operation is necessary because when later this 
+    # Numpy array is viewed as an image it comes out rotated by 90
+    # degrees without it.
     with_height = np.stack(  # type: ignore
-        (thin_im for _ in range(100)), axis=1)
+        (thin_im for _ in range(100)), axis=1).T
     with_rgb = np.stack(  # type: ignore
         (with_height for _ in range(3)), axis=2)
     as_uint8 = with_rgb.astype(np.uint8)
@@ -318,7 +321,6 @@ def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
     D can be ignored and the x-coordinates are used as the number line.
     """
     gradient: float = (D['y'] - A['y']) / (D['x'] - A['x'])
-    y_intercept: float = A['y'] - gradient * A['x']
     angle: float = m.atan(gradient)
     rotation: 'np.ndarray[float]' = np.array([
         [m.cos(angle), m.sin(angle)],
@@ -389,7 +391,6 @@ def _calculate_C(
     """
     x1: float = (
         (obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5
-    x2: float = (x1**2 - obs['radius']**2)**0.5
     phi2: float = m.asin(obs['radius'] / x1)
     x5: float = obs['y'] - cam['y']
     phi5: float = m.asin(x5 / x1)

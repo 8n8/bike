@@ -1,6 +1,6 @@
 import math as m
 import numpy as np
-from PIL import Image
+from PIL import Image  # type: ignore
 import simulate_world as s
 import unittest as u
 
@@ -52,10 +52,10 @@ def world3() -> s.WorldState:
 def readings3() -> s.SensorReadings:
     white_image: 'np.ndarray[np.uint8]' = (  # type: ignore
         255 * np.ones((100, 100, 3), dtype=np.uint8))
-    right_image = np.concatenate((
-        255 * np.ones((21, 100, 3), dtype=np.uint8),
-        np.zeros((57, 100, 3), dtype=np.uint8),
-        255 * np.ones((22, 100, 3), dtype=np.uint8)), axis=0)
+    right_image = np.concatenate((  # type: ignore
+        255 * np.ones((100, 21, 3), dtype=np.uint8),
+        np.zeros((100, 57, 3), dtype=np.uint8),
+        255 * np.ones((100, 22, 3), dtype=np.uint8)), axis=1)
     return {
         'cameras': {
             'front': white_image,
@@ -72,9 +72,9 @@ def readings2() -> s.SensorReadings:
     white_image: 'np.ndarray[np.uint8]' = (  # type: ignore
         255 * np.ones((100, 100, 3), dtype=np.uint8))
     front_image: 'np.ndarray[np.uint8]' = np.concatenate((  # type: ignore
-        255 * np.ones((21, 100, 3), dtype=np.uint8),
-        np.zeros((57, 100, 3), dtype=np.uint8),
-        255 * np.ones((22, 100, 3), dtype=np.uint8)), axis=0)
+        255 * np.ones((100, 21, 3), dtype=np.uint8),
+        np.zeros((100, 57, 3), dtype=np.uint8),
+        255 * np.ones((100, 22, 3), dtype=np.uint8)), axis=1)
     return {
         'cameras': {
             'front': front_image,
