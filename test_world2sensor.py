@@ -1,7 +1,6 @@
 import math as m
 import numpy as np
-import simulate_world as s
-import unittest as u
+import world2sensor as s
 
 
 def world1() -> s.WorldState:
@@ -144,18 +143,19 @@ def equal_sensor_state(
     return True
 
 
-class test_calculate_sensor_readings(u.TestCase):
-
-    def test_calculate_sensor_readings(self):
-        self.assertTrue(equal_sensor_state(
-            s.calculate_sensor_readings(world1()),
-            readings1()))
-        self.assertTrue(equal_sensor_state(
-            s.calculate_sensor_readings(world2()),
-            readings2()))
-        self.assertTrue(equal_sensor_state(
-            s.calculate_sensor_readings(world3()),
-            readings3()))
+def test_no_obstacles():
+    assert (equal_sensor_state(
+        s.calculate_sensor_readings(world1()),
+        readings1()))
 
 
-u.main()
+def test_one_obstacle_in_front():
+    assert (equal_sensor_state(
+        s.calculate_sensor_readings(world2()),
+        readings2()))
+
+
+def test_one_obstacle_on_left():
+    assert (equal_sensor_state(
+        s.calculate_sensor_readings(world3()),
+        readings3()))
