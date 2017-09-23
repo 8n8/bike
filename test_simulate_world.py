@@ -1,6 +1,5 @@
 import math as m
 import numpy as np
-from PIL import Image  # type: ignore
 import simulate_world as s
 import unittest as u
 
@@ -121,8 +120,6 @@ def equal_sensor_state(
         print('Front image was not correct.')
         return False
     if not equal_nparray(onecams['left'], twocams['left']):
-        img = Image.fromarray(onecams['left'], 'RGB')
-        img.show()
         print('Left-hand image was not correct.')
         return False
     if not equal_nparray(onecams['right'], twocams['right']):
@@ -152,12 +149,12 @@ def equal_sensor_state(
 class test_calculate_sensor_readings(u.TestCase):
 
     def test_calculate_sensor_readings(self):
-        # self.assertTrue(equal_sensor_state(
-        #     s.calculate_sensor_readings(world1()),
-        #     readings1()))
-        # self.assertTrue(equal_sensor_state(
-        #     s.calculate_sensor_readings(world2()),
-        #     readings2()))
+        self.assertTrue(equal_sensor_state(
+            s.calculate_sensor_readings(world1()),
+            readings1()))
+        self.assertTrue(equal_sensor_state(
+            s.calculate_sensor_readings(world2()),
+            readings2()))
         self.assertTrue(equal_sensor_state(
             s.calculate_sensor_readings(world3()),
             readings3()))
