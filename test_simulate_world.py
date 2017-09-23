@@ -1,4 +1,6 @@
+import math as m
 import numpy as np
+from PIL import Image
 import simulate_world as s
 import unittest as u
 
@@ -13,6 +15,76 @@ def world1() -> s.WorldState:
         'lean': 0,
         'lean_acceleration': 0,
         'steer': 0}
+
+
+def world2() -> s.WorldState:
+    return {
+        'obstacles': [
+            {
+                'x': 0,
+                'y': 0.2,
+                'radius': 0.1}],
+        'x': 0,
+        'y': 0,
+        'velocity': 0,
+        'orientation': m.pi / 2,
+        'lean': 0,
+        'lean_acceleration': 0,
+        'steer': 0}
+
+
+def world3() -> s.WorldState:
+    return {
+        'obstacles': [
+            {
+                'x': 0.2,
+                'y': 0,
+                'radius': 0.1}],
+        'x': 0,
+        'y': 0,
+        'velocity': 0,
+        'orientation': m.pi / 2,
+        'lean': 0,
+        'lean_acceleration': 0,
+        'steer': 0}
+
+
+def readings3() -> s.SensorReadings:
+    white_image: 'np.ndarray[np.uint8]' = (  # type: ignore
+        255 * np.ones((100, 100, 3), dtype=np.uint8))
+    right_image = np.concatenate((
+        255 * np.ones((21, 100, 3), dtype=np.uint8),
+        np.zeros((57, 100, 3), dtype=np.uint8),
+        255 * np.ones((22, 100, 3), dtype=np.uint8)), axis=0)
+    return {
+        'cameras': {
+            'front': white_image,
+            'left': white_image,
+            'right': right_image,
+            'back': white_image},
+        'lean_acceleration': 0,
+        'steer': 0,
+        'velocity': 0,
+        'gps': {'x': 0, 'y': 0}}
+
+
+def readings2() -> s.SensorReadings:
+    white_image: 'np.ndarray[np.uint8]' = (  # type: ignore
+        255 * np.ones((100, 100, 3), dtype=np.uint8))
+    front_image: 'np.ndarray[np.uint8]' = np.concatenate((  # type: ignore
+        255 * np.ones((21, 100, 3), dtype=np.uint8),
+        np.zeros((57, 100, 3), dtype=np.uint8),
+        255 * np.ones((22, 100, 3), dtype=np.uint8)), axis=0)
+    return {
+        'cameras': {
+            'front': front_image,
+            'left': white_image,
+            'right': white_image,
+            'back': white_image},
+        'lean_acceleration': 0,
+        'steer': 0,
+        'velocity': 0,
+        'gps': {'x': 0, 'y': 0}}
 
 
 def readings1() -> s.SensorReadings:
@@ -49,6 +121,8 @@ def equal_sensor_state(
         print('Front image was not correct.')
         return False
     if not equal_nparray(onecams['left'], twocams['left']):
+        img = Image.fromarray(onecams['left'], 'RGB')
+        img.show()
         print('Left-hand image was not correct.')
         return False
     if not equal_nparray(onecams['right'], twocams['right']):
@@ -77,10 +151,16 @@ def equal_sensor_state(
 
 class test_calculate_sensor_readings(u.TestCase):
 
-    def test_types(self):
+    def test_calculate_sensor_readings(self):
+        # self.assertTrue(equal_sensor_state(
+        #     s.calculate_sensor_readings(world1()),
+        #     readings1()))
+        # self.assertTrue(equal_sensor_state(
+        #     s.calculate_sensor_readings(world2()),
+        #     readings2()))
         self.assertTrue(equal_sensor_state(
-            s.calculate_sensor_readings(world1()),
-            readings1()))
+            s.calculate_sensor_readings(world3()),
+            readings3()))
 
 
 u.main()

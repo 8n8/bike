@@ -15,6 +15,14 @@ class Obstacle(TypedDict):
     radius: float
 
 
+class CamSpec(TypedDict):
+    x: float
+    y: float
+    k: float
+    theta: float
+    alpha: float
+
+
 class Point(TypedDict):
     x: float
     y: float
@@ -44,14 +52,6 @@ class SensorReadings(TypedDict):
     lean_acceleration: float
     steer: float
     gps: Point
-
-
-class CamSpec(TypedDict):
-    x: float
-    y: float
-    k: float
-    theta: float
-    alpha: float
 
 
 class AllCamSpecs(TypedDict):
@@ -209,10 +209,10 @@ def _make_thin_image(x: float, y: float) -> 'np.ndarray[bool]':
     RGB image later.  Clear space is represented by ones and obstacles
     by zeros.
     """
-    return np.concatenate(  # type: ignore
+    return np.concatenate((  # type: ignore
         np.ones(int(x), dtype=bool),
         np.zeros(int(y), dtype=bool),
-        np.ones(int(100 - x - y), dtype=bool))
+        np.ones(int(100 - x - y), dtype=bool)))
 
 
 def _obstacle_image_parameters(
@@ -227,9 +227,14 @@ def _obstacle_image_parameters(
     A diagram is shown in ./simulateTrig.pdf.  The required values are
     x and y (shown on the diagram).
     """
-    A, B, C, D = _flatten_points(_calculate_ABCD_coords(cam, obs))
+    points = _calculate_ABCD_coords(cam, obs)
+    A, B, C, D = _flatten_points(points)
     z: float = _width_of_camera_lens(cam)
     x: float = 0
+    if C <= B:
+        return {
+            'x': 0,
+            'y': 0}
     if B > 0:
         x = min(z, B)
     y: float = 0
@@ -249,7 +254,7 @@ def _width_of_camera_lens(
     It calculates the width of the camera lens.  See page 6 of
     ./simulateTrig.pdf for details.
     """
-    return 2 * cam['k'] * m.atan(cam['theta'] / 2)
+    return 2 * cam['k'] * m.tan(cam['theta'] / 2)
 
 
 FourPoint = Tuple[Point, Point, Point, Point]
@@ -288,6 +293,10 @@ def _flatten_points(
     Bflat: float = flatten(B)
     Cflat: float = flatten(C)
     Dflat: float = flatten(D)
+    if Dflat < 0:
+        Bflat = -Bflat
+        Cflat = -Cflat
+        Dflat = -Dflat
     return 0.0, Bflat, Cflat, Dflat
 
 
@@ -318,26 +327,10 @@ def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
     def flatten(p: Point) -> float:
         return np.matmul(  # type: ignore
             rotation,
-            np.array([[p['x']], [p['y'] - y_intercept]]))[0][0]
+            np.array([[p['x']], [p['y']]]))[0][0]
 
-    Anew, Xnew = _flipsign(flatten(A), flatten(D), flatten(X))
+    Anew, Xnew = flatten(A), flatten(X)
     return Xnew - Anew
-
-
-def _flipsign(
-        Aflat: float,
-        Dflat: float,
-        Xflat: float
-        ) -> Tuple[float, float]:
-    """
-    Aflat is supposed to be less than Dflat on the real number line
-    defined by them.  Xflat is another point on the number line.  This
-    function flips the sign if Aflat is in fact bigger than Dflat.
-    """
-    if Aflat < Dflat:
-        return Aflat, Xflat
-    else:
-        return -Aflat, -Xflat
 
 
 def _calculate_A(
@@ -367,14 +360,19 @@ def _calculate_B(
     """
     z: float = (
         ((obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5)
-    phi1: float = m.atan((obs['y'] - cam['y']) / (obs['x'] - cam['x']))
+    delta_x: float = obs['x'] - cam['x']
+    phi1: float
+    if delta_x == 0:
+        phi1 = m.pi / 2
+    else:
+        phi1 = m.atan((obs['y'] - cam['y']) / (obs['x'] - cam['x']))
     phi2: float = m.asin(obs['radius'] / z)
     phi: float = phi1 + phi2
     u: float = cam['alpha'] - phi
     d1: float = cam['k'] * m.tan(u)
     s: float = (cam['k']**2 + d1**2)**0.5
-    x2: float = s * m.cos(cam['alpha'])
-    x3: float = s * m.sin(cam['alpha'])
+    x2: float = s * m.cos(phi)
+    x3: float = s * m.sin(phi)
     return {
         'x': cam['x'] + x2,
         'y': cam['y'] + x3}
@@ -392,7 +390,7 @@ def _calculate_C(
     x1: float = (
         (obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5
     x2: float = (x1**2 - obs['radius']**2)**0.5
-    phi2: float = m.asin(obs['radius'] / x2)
+    phi2: float = m.asin(obs['radius'] / x1)
     x5: float = obs['y'] - cam['y']
     phi5: float = m.asin(x5 / x1)
     phi1: float = phi5 - phi2
