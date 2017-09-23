@@ -16,4 +16,3 @@ def worldbefore() -> w.WorldState:
 
 def test_stepworld():
     assert s.run(worldbefore(), 1, 42) != worldbefore()
-
