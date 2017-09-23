@@ -20,6 +20,7 @@ def world2() -> s.WorldState:
         'obstacles': [
             {'x': 0,
              'y': 0.2,
+             'velocity': {'x': 0, 'y': 0},
              'radius': 0.1}],
         'x': 0,
         'y': 0,
@@ -35,6 +36,7 @@ def world3() -> s.WorldState:
         'obstacles': [
             {'x': 0.2,
              'y': 0,
+             'velocity': {'x': 0, 'y': 0},
              'radius': 0.1}],
         'x': 0,
         'y': 0,

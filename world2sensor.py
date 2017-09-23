@@ -9,9 +9,15 @@ class ImageParameters(TypedDict):
     y: int
 
 
+class Velocity(TypedDict):
+    x: float
+    y: float
+
+
 class Obstacle(TypedDict):
     x: float
     y: float
+    velocity: Velocity
     radius: float
 
 
