@@ -1,7 +1,7 @@
 import math as m
 from mypy_extensions import TypedDict
 import numpy as np
-from typing import (List, Tuple)
+from typing import (List)
 
 
 class ImageParameters(TypedDict):
@@ -26,6 +26,13 @@ class CamSpec(TypedDict):
 class Point(TypedDict):
     x: float
     y: float
+
+
+class FourPoints(TypedDict):
+    A: Point
+    B: Point
+    C: Point
+    D: Point
 
 
 class WorldState(TypedDict):
@@ -231,20 +238,20 @@ def _obstacle_image_parameters(
     x and y (shown on the diagram).
     """
     points = _calculate_ABCD_coords(cam, obs)
-    A, B, C, D = _flatten_points(points)
+    X = _flatten_points(points)
     z: float = _width_of_camera_lens(cam)
     x: float = 0
-    if C <= B:
+    if X['C'] <= X['B']:
         return {
             'x': 0,
             'y': 0}
-    if B > 0:
-        x = min(z, B)
+    if X['B'] > 0:
+        x = min(z, X['B'])
     y: float = 0
-    if D - C < 0:
-        y = min(z, D - B)
+    if X['D'] - X['C'] < 0:
+        y = min(z, X['D'] - X['B'])
     else:
-        y = min(z, C - B)
+        y = min(z, X['C'] - X['B'])
     return {
         'x': int(x * 100 / z),
         'y': int(y * 100 / z)}
@@ -260,28 +267,32 @@ def _width_of_camera_lens(
     return 2 * cam['k'] * m.tan(cam['theta'] / 2)
 
 
-FourPoint = Tuple[Point, Point, Point, Point]
-
-
 def _calculate_ABCD_coords(
         cam: CamSpec,
         obs: Obstacle,
-        ) -> FourPoint:
+        ) -> FourPoints:
     """
     It calculates the coordinates of the points A, B, C and D, which
     are points along the lens-line of the camera.  They are shown on
     the diagram in ./simulateTrig.pdf.
     """
-    return (
-        _calculate_A(cam),
-        _calculate_B(cam, obs),
-        _calculate_C(cam, obs),
-        _calculate_D(cam))
+    return {
+        'A': _calculate_A(cam),
+        'B': _calculate_B(cam, obs),
+        'C': _calculate_C(cam, obs),
+        'D': _calculate_D(cam)}
+
+
+class FlatPoints(TypedDict):
+    A: float
+    B: float
+    C: float
+    D: float
 
 
 def _flatten_points(
-        points: FourPoint
-        ) -> Tuple[float, float, float, float]:
+        points: FourPoints
+        ) -> FlatPoints:
     """
     A, B, C and D are dictionaries, each containing 'x' and 'y' fields.
     These describe 2D Cartesian coordinates.  A, B, C and D are all on
@@ -289,18 +300,20 @@ def _flatten_points(
     by treating the common line as a real number line with A at 0 and
     D on the positive side of A.
     """
-    A, B, C, D = points
-
     def flatten(point: Point) -> float:
-        return _compare_to_AD(A, D, point)
-    Bflat: float = flatten(B)
-    Cflat: float = flatten(C)
-    Dflat: float = flatten(D)
+        return _compare_to_AD(points['A'], points['D'], point)
+    Bflat: float = flatten(points['B'])
+    Cflat: float = flatten(points['C'])
+    Dflat: float = flatten(points['D'])
     if Dflat < 0:
         Bflat = -Bflat
         Cflat = -Cflat
         Dflat = -Dflat
-    return 0.0, Bflat, Cflat, Dflat
+    return {
+        'A': 0.0,
+        'B': Bflat,
+        'C': Cflat,
+        'D': Dflat}
 
 
 def _compare_to_AD(A: Point, D: Point, X: Point) -> float:

@@ -19,10 +19,9 @@ def world1() -> s.WorldState:
 def world2() -> s.WorldState:
     return {
         'obstacles': [
-            {
-                'x': 0,
-                'y': 0.2,
-                'radius': 0.1}],
+            {'x': 0,
+             'y': 0.2,
+             'radius': 0.1}],
         'x': 0,
         'y': 0,
         'velocity': 0,
@@ -35,10 +34,9 @@ def world2() -> s.WorldState:
 def world3() -> s.WorldState:
     return {
         'obstacles': [
-            {
-                'x': 0.2,
-                'y': 0,
-                'radius': 0.1}],
+            {'x': 0.2,
+             'y': 0,
+             'radius': 0.1}],
         'x': 0,
         'y': 0,
         'velocity': 0,
