@@ -8,10 +8,14 @@ def run(
         ) -> w.WorldState:
     return {
         'obstacles': [],
-        'x': 1,
-        'y': 1,
-        'orientation': 1,
-        'velocity': 1,
-        'lean': 1,
-        'lean_acceleration': 1,
-        'steer': 1}
+        'bike': {
+            'psi': 1,
+            'v': 1,
+            'phi': 1,
+            'phidot': 1,
+            'delta': 1,
+            'deltadot': 1,
+            'Tdelta': 1,
+            'Tm': 1,
+            'x': 1,
+            'y': 1}}

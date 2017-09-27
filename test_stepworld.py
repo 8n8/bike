@@ -5,13 +5,17 @@ import world2sensor as w
 def worldbefore() -> w.WorldState:
     return {
         'obstacles': [],
-        'x': 0,
-        'y': 0,
-        'velocity': 0,
-        'orientation': 0,
-        'lean': 0,
-        'lean_acceleration': 0,
-        'steer': 0}
+        'bike': {
+            'x': 0,
+            'y': 0,
+            'v': 0,
+            'psi': 0,
+            'phi': 0,
+            'phidot': 0,
+            'delta': 0,
+            'deltadot': 0,
+            'Tdelta': 0,
+            'Tm': 0}}
 
 
 def test_stepworld():

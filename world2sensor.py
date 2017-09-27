@@ -41,15 +41,22 @@ class FourPoints(TypedDict):
     D: Point
 
 
-class WorldState(TypedDict):
-    obstacles: List[Obstacle]
+class BikeState(TypedDict):
+    v: float
+    psi: float
+    phi: float
+    phidot: float
+    delta: float
+    deltadot: float
+    Tdelta: float
+    Tm: float
     x: float
     y: float
-    velocity: float
-    orientation: float
-    lean: float
-    lean_acceleration: float
-    steer: float
+
+
+class WorldState(TypedDict):
+    bike: BikeState
+    obstacles: List[Obstacle]
 
 
 class ImageSet(TypedDict):
@@ -100,15 +107,15 @@ def calculate_sensor_readings(
     return {
         'cameras': _calculate_images(
             world_state['obstacles'],
-            world_state['x'],
-            world_state['y'],
-            world_state['orientation']),
-        'lean_acceleration': world_state['lean_acceleration'],
-        'steer': world_state['steer'],
-        'velocity': world_state['velocity'],
+            world_state['bike']['x'],
+            world_state['bike']['y'],
+            world_state['bike']['psi']),
+        'lean_acceleration': world_state['bike']['phidot'],
+        'steer': world_state['bike']['delta'],
+        'velocity': world_state['bike']['v'],
         'gps': {
-            'x': world_state['x'],
-            'y': world_state['y']}}
+            'x': world_state['bike']['x'],
+            'y': world_state['bike']['y']}}
 
 
 def _camera_properties(
