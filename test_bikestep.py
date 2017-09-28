@@ -4,17 +4,60 @@ import world2sensor as w
 
 def bikestate1() -> w.BikeState:
     return {
-        'v': 0,
-        'psi': 0,
-        'phi': 0,
-        'phidot': 0,
-        'delta': 0,
-        'deltadot': 0,
-        'x': 0,
-        'y': 0,
-        'Tdelta': 0,
-        'Tm': 0}
+        'v': 0.0,
+        'psi': 0.1,
+        'phi': 0.0,
+        'phidot': 0.0,
+        'delta': 0.0,
+        'deltadot': 0.0,
+        'x': 0.0,
+        'y': 0.0,
+        'Tdelta': 0.0,
+        'Tm': 10.0}
 
 
-def test_bikestep():
-    assert b.main(bikestate1(), 0.03) is not None
+def bikestate2() -> w.BikeState:
+    return {
+        'v': 0.0,
+        'psi': 3.14,
+        'phi': 0.0,
+        'phidot': 0.0,
+        'delta': 0.0,
+        'deltadot': 0.0,
+        'x': 0.0,
+        'y': 0.0,
+        'Tdelta': 0.0,
+        'Tm': 10.0}
+
+
+def bikestate3() -> w.BikeState:
+    return {
+        'v': 0.0,
+        'psi': 0.0,
+        'phi': 0.0,
+        'phidot': 0.0,
+        'delta': 0.5,
+        'deltadot': 0.0,
+        'x': 0.0,
+        'y': 0.0,
+        'Tdelta': 0.0,
+        'Tm': 10.0}
+
+
+def test_bikestep1():
+    i = bikestate1()
+    o = b.main(i, 3.0)
+    assert i['x'] != o['x']
+    assert i['y'] != o['y']
+
+
+def test_bikestep2():
+    i = bikestate2()
+    o = b.main(i, 3.0)
+    assert o['x'] < 0.0
+
+
+def test_bikestep3():
+    i = bikestate3()
+    o = b.main(i, 1)
+    assert o['y'] > 0
