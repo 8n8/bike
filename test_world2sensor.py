@@ -22,8 +22,9 @@ def world1() -> s.WorldState:
 def world2() -> s.WorldState:
     return {
         'obstacles': [
-            {'x': 0,
-             'y': 0.2,
+            {'position': {
+                'x': 0,
+                'y': 0.2},
              'velocity': {'x': 0, 'y': 0},
              'radius': 0.1}],
         'bike': {
@@ -42,8 +43,9 @@ def world2() -> s.WorldState:
 def world3() -> s.WorldState:
     return {
         'obstacles': [
-            {'x': 0.2,
-             'y': 0,
+            {'position': {
+                'x': 0.2,
+                'y': 0},
              'velocity': {'x': 0, 'y': 0},
              'radius': 0.1}],
         'bike': {
@@ -159,17 +161,17 @@ def equal_sensor_state(
 
 def test_no_obstacles():
     assert (equal_sensor_state(
-        s.calculate_sensor_readings(world1()),
+        s.main(world1()),
         readings1()))
 
 
 def test_one_obstacle_in_front():
     assert (equal_sensor_state(
-        s.calculate_sensor_readings(world2()),
+        s.main(world2()),
         readings2()))
 
 
 def test_one_obstacle_on_left():
     assert (equal_sensor_state(
-        s.calculate_sensor_readings(world3()),
+        s.main(world3()),
         readings3()))

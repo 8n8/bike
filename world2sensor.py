@@ -1,3 +1,9 @@
+"""
+Given the state of the simulated world, it works out what the
+sensor readings should be.
+"""
+
+
 import math as m
 from mypy_extensions import TypedDict
 import numpy as np
@@ -14,9 +20,13 @@ class Velocity(TypedDict):
     y: float
 
 
-class Obstacle(TypedDict):
+class Point(TypedDict):
     x: float
     y: float
+
+
+class Obstacle(TypedDict):
+    position: Point
     velocity: Velocity
     radius: float
 
@@ -27,11 +37,6 @@ class CamSpec(TypedDict):
     k: float
     theta: float
     alpha: float
-
-
-class Point(TypedDict):
-    x: float
-    y: float
 
 
 class FourPoints(TypedDict):
@@ -81,9 +86,7 @@ class AllCamSpecs(TypedDict):
     right: CamSpec
 
 
-def calculate_sensor_readings(
-        world_state: WorldState
-        ) -> SensorReadings:
+def main(world_state: WorldState) -> SensorReadings:
     """
     Given the state of the simulated world, it works out what the
     sensor readings should be.
@@ -134,11 +137,7 @@ def _camera_properties(
         'right': _generic_cam(orientation - m.pi/2, x, y)}
 
 
-def _generic_cam(
-        alpha: float,
-        x: float,
-        y: float
-        ) -> CamSpec:
+def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
     return {
         'x': x,
         'y': y,
@@ -270,9 +269,7 @@ def _obstacle_image_parameters(
         'y': int(y * 100 / z)}
 
 
-def _width_of_camera_lens(
-        cam: CamSpec
-        ) -> float:
+def _width_of_camera_lens(cam: CamSpec) -> float:
     """
     It calculates the width of the camera lens.  See page 6 of
     ./simulateTrig.pdf for details.
@@ -303,9 +300,7 @@ class FlatPoints(TypedDict):
     D: float
 
 
-def _flatten_points(
-        points: FourPoints
-        ) -> FlatPoints:
+def _flatten_points(points: FourPoints) -> FlatPoints:
     """
     A, B, C and D are dictionaries, each containing 'x' and 'y' fields.
     These describe 2D Cartesian coordinates.  A, B, C and D are all on
@@ -361,9 +356,7 @@ def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
     return Xnew - Anew
 
 
-def _calculate_A(
-        cam: CamSpec
-        ) -> Point:
+def _calculate_A(cam: CamSpec) -> Point:
     """
     It calculates the position of the left-hand side of the camera
     lens.  See diagram and workings in ./simulatorTrig.pdf.
@@ -377,23 +370,22 @@ def _calculate_A(
         'y': cam['y'] + x2}
 
 
-def _calculate_B(
-        cam: CamSpec,
-        obs: Obstacle,
-        ) -> Point:
+def _calculate_B(cam: CamSpec, obs: Obstacle,) -> Point:
     """
     It calculates the position of the intercept of the left-hand
     view-line of the obstacle and the lens line.  See diagram and
     workings in ./simulateTrig.pdf.
     """
     z: float = (
-        ((obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5)
-    delta_x: float = obs['x'] - cam['x']
+        (obs['position']['x'] - cam['x'])**2
+        + (obs['position']['y'] - cam['y'])**2)**0.5
+    delta_x: float = obs['position']['x'] - cam['x']
     phi1: float
     if delta_x == 0:
         phi1 = m.pi / 2
     else:
-        phi1 = m.atan((obs['y'] - cam['y']) / (obs['x'] - cam['x']))
+        phi1 = (m.atan((obs['position']['y'] - cam['y'])
+                / (obs['position']['x'] - cam['x'])))
     phi2: float = m.asin(obs['radius'] / z)
     phi: float = phi1 + phi2
     u: float = cam['alpha'] - phi
@@ -406,19 +398,16 @@ def _calculate_B(
         'y': cam['y'] + x3}
 
 
-def _calculate_C(
-        cam: CamSpec,
-        obs: Obstacle,
-        ) -> Point:
+def _calculate_C(cam: CamSpec, obs: Obstacle) -> Point:
     """
     It calculates the position of the intercept of the right-hand
     view-line of the obstacle and the lens line.  See diagram and
     workings in ./simulateTrig.pdf.
     """
-    x1: float = (
-        (obs['x'] - cam['x'])**2 + (obs['y'] - cam['y'])**2)**0.5
+    x1: float = ((obs['position']['x'] - cam['x'])**2
+                 + (obs['position']['y'] - cam['y'])**2)**0.5
     phi2: float = m.asin(obs['radius'] / x1)
-    x5: float = obs['y'] - cam['y']
+    x5: float = obs['position']['y'] - cam['y']
     phi5: float = m.asin(x5 / x1)
     phi1: float = phi5 - phi2
     phi3: float = cam['alpha'] - phi5
@@ -431,9 +420,7 @@ def _calculate_C(
         'y': cam['y'] + x4}
 
 
-def _calculate_D(
-        cam: CamSpec
-        ) -> Point:
+def _calculate_D(cam: CamSpec) -> Point:
     """
     It calculates the position of the right-hand end of the camera
     lens.

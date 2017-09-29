@@ -1,9 +1,3 @@
-import math as m
-import world2sensor as w
-from mypy_extensions import TypedDict
-from scipy.integrate import odeint  # type: ignore
-from typing import List
-
 """
 It exports one function (main) that increments the bike state by one
 step, using the equations of motion taken from ref meijaard07 in the
@@ -12,6 +6,13 @@ docs.
 The documentation for this module is in
 bikeproject/simulateWorld/bikestep/main.tex.
 """
+
+
+import math as m
+import world2sensor as w
+from mypy_extensions import TypedDict
+from scipy.integrate import odeint  # type: ignore
+from typing import List
 
 
 # The matrix elements for the bicycle equation of motion.  These are
