@@ -1,14 +1,14 @@
-import math as m
-import random
-from typing import List
-import world2sensor as w
-
-
 """
 It maintains the population of obstacles in the world, keeping a
 reasonable number moving around near the bicycle and deleting ones
 that are too far away.  The only function exposed is main().
 """
+
+
+import math as m
+import random
+from typing import List
+import world2sensor as w
 
 
 def main(
