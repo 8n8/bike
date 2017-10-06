@@ -1,6 +1,6 @@
-import keras as k
+import keras as k  # type: ignore
 from mypy_extensions import TypedDict
-from keras.optimizers import SGD
+import numpy as np  # noqa: F401
 
 
 class ImageOverTime(TypedDict):
@@ -57,24 +57,20 @@ def first_net():
             3,
             strides=(2, 2),
             padding='same',
-            activation='relu')])
-        #k.layers.normalization.BatchNormalization(),  # (1, 3380)
-#        k.layers.core.Dense(3000, activation='relu')])
-#        k.layers.core.Flatten()])
-#        k.layers.normalization.BatchNormalization(),
-#        k.layers.core.Dense(6000, activation='relu'),
-#        k.layers.core.Dense(3000, activation='relu')])
+            activation='relu'),
+        k.layers.normalization.BatchNormalization(),
+        k.layers.core.Flatten()])
 
 
-def second_net(): 
+def second_net():
     return k.models.Sequential([
-        k.layers.core.Dense(
-            5000,
+        k.layers.convolutional.Conv2D(
+            20,  # number of output layers
+            3,  # kernel size
+            strides=(2, 2),
+            padding='same',
             activation='relu',
-            input_shape=(2940, 5))])
-        # k.layers.core.Dense(5000, activation='relu')])
-
-
-def main(i):
-    nn = neural_net()
-    return nn.predict(i)
+            input_shape=(2940, 5, 1)),
+        k.layers.normalization.BatchNormalization(),
+        k.layers.core.Flatten(),
+        k.layers.core.Dense(5000, activation='relu')])

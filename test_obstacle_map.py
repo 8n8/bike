@@ -3,19 +3,11 @@ import obstacle_map as o
 
 
 def test_output_shape():
-    i = np.random.randint(0, 256, size=(1, 200, 200, 5, 3), dtype=np.uint8)
-    assert o.main(i).shape == (1, 11040)
-
-#     i = np.random.randint(0, 256, size=(100, 100), dtype=np.uint8)
-#     is = {
-#         'left': i,
-#         'right': i,
-#         'back': i,
-#         'right': i}
-#     images = {
-#         't100': is,
-#         't300': is,
-#         't900': is,
-#         't2700': is,
-#         't8100': is}
-#     assert o.main(images).shape == (100, 100)
+    i = np.random.randint(0, 256, size=(1, 200, 200, 3), dtype=np.uint8)
+    midout = o.first_net().predict(i)
+    assert midout.shape == (1, 2940)
+    midin = np.stack(
+        [midout for _ in range(5)], axis=1).reshape(1, 2940, 5, 1)
+    assert midin.shape == (1, 2940, 5, 1)
+    out = o.second_net().predict(midin)
+    assert out.shape == (1, 5000)
