@@ -16,7 +16,121 @@ def main(
         obstacles: List[w.Obstacle],
         freenesses: List[Freeness]
         ) -> float:
-    return -1
+    obstacle_intersects: List[bool] = [
+        _obstacle_intersects_a_freeness(o, freenesses) for o in obstacles]
+    freeness_intersects: List[bool] = [
+        _freeness_intersects_an_obstacle(obstacles, f) for f in freenesses]
+    intersecting_obstacles: List[w.Obstacle] = [
+        o for o, intersects in zip(obstacles, obstacle_intersects)
+        if intersects]
+    non_intersecting_obstacles: List[w.Obstacle] = [
+        o for o, intersects in zip(obstacles, obstacle_intersects)
+        if not intersects]
+    intersecting_freenesses: List[Freeness] = [
+        f for f, intersects in zip(freenesses, freeness_intersects)
+        if intersects]
+    non_intersecting_freenesses: List[Freeness] = [
+        f for f, intersects in zip(freenesses, freeness_intersects)
+        if not intersects]
+    intersecting_obstacle_err: float = _intersecting_obstacles_err(
+        intersecting_obstacles,
+        intersecting_freenesses)
+    non_intersecting_obstacle_err: float = _non_intersecting_obstacles_err(
+        non_intersecting_obstacles)
+    intersecting_freeness_err: float = _intersecting_freenesses_err(
+        intersecting_obstacles,
+        intersecting_freenesses)
+    non_intersecting_freeness_err: float = _non_intersecting_freeness_err(
+        non_intersecting_freenesses)
+    return (intersecting_obstacle_err + non_intersecting_obstacle_err +
+            intersecting_freeness_err + non_intersecting_freeness_err)
+
+
+
+def _intersecting_obstacles_err(
+        os: List[w.Obstacle],
+        fs: List[Freeness]
+        ) -> float:
+    """
+    It works out the error for all the obstacles that have paths that
+    intersect freenesses.
+    """
+
+def _non_intersecting_freenesses_err(fs: List[Freeness]) -> float:
+    """
+    It calculates the error for all the freenesses that do not intersect
+    the paths of obstacles.  This type of freenesses are always erroneous
+    because the whole point of a freeness is that it marks places that
+    will soon not be free.  The error is bigger when the area of the
+    freeness is greater and bigger when the rating of the freeness is
+    smaller.
+    """
+    return sum((math.pi * f['radius']**2 / f['free_time']  for f in fs))
+
+
+def _non_intersecting_obstacles_err(os: List[w.Obstacles]) -> float:
+    """
+    It calculates the error for all the obstacles with paths that do not
+    intersect freenesses.
+        
+       time till occupied
+        ^
+        |
+        |     default time till occupied
+        |        (as high as possible)
+      d | - - - - - - - - - - - - - - - - - - -
+        |                              ' 
+        |                              ' 
+      k |   -    error area (a)   -    *
+        |                          *   '
+        |                      *       '
+        |                  *           '
+        |              * actual time   '
+        |          * till occupied     '
+        |      * curve                 '  distance from 
+        |  *                           '  start position
+      0 +---------------------------------------------->
+        0                              |         
+                                     100 m
+                           (max distance considered)
+    
+    From the diagram, it can be seen that
+        a = 100d - (100k/2)
+    where
+        k = 100/v
+        v = velocity of obstacle
+    so 
+        a = 100d - (100 (100/v) / 2)
+          = 100d - (5000 / v)
+          = 100 ( d - (50 / v) )
+    """
+    d: float = 1000_000.0
+    return sum((100 * (d - (50 / magnitude(o['velocity']))) for o in os))
+
+
+def magnitude(v: w.Velocity) -> float:
+    return (v['x']**2 + v['y']**2)**0.5
+
+
+def _compare_intersecting(
+        os: List[w.Obstacle],
+        fs: List[Freeness]
+        ) -> float
+    
+
+
+def _freeness_intersects_an_obstacle(
+        os: List[w.Obstacle],
+        f: Freeness
+        ) -> bool
+   return any((_obstacle_intersects_freeness(o, f) for o in os))  
+
+
+def _obstacle_intersects_a_freeness(
+        o: w.Obstacle,
+        fs: List[Freeness]
+        ) -> bool:
+    return any((_obstacle_intersects_freeness(o, f) for f in fs))
 
 
 def _distance_between(a: w.Point, b: w.Point) -> float:
