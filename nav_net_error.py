@@ -1,5 +1,6 @@
 from mypy_extensions import TypedDict
 import math
+import numpy as np
 from typing import (List, Tuple)
 import world2sensor as w
 
@@ -16,35 +17,123 @@ def main(
         obstacles: List[w.Obstacle],
         freenesses: List[Freeness]
         ) -> float:
-    obstacle_intersects: List[bool] = [
-        _obstacle_intersects_a_freeness(o, freenesses) for o in obstacles]
-    freeness_intersects: List[bool] = [
-        _freeness_intersects_an_obstacle(obstacles, f) for f in freenesses]
-    intersecting_obstacles: List[w.Obstacle] = [
-        o for o, intersects in zip(obstacles, obstacle_intersects)
-        if intersects]
-    non_intersecting_obstacles: List[w.Obstacle] = [
-        o for o, intersects in zip(obstacles, obstacle_intersects)
-        if not intersects]
-    intersecting_freenesses: List[Freeness] = [
-        f for f, intersects in zip(freenesses, freeness_intersects)
-        if intersects]
-    non_intersecting_freenesses: List[Freeness] = [
-        f for f, intersects in zip(freenesses, freeness_intersects)
-        if not intersects]
-    intersecting_obstacle_err: float = _intersecting_obstacles_err(
-        intersecting_obstacles,
-        intersecting_freenesses)
-    non_intersecting_obstacle_err: float = _non_intersecting_obstacles_err(
-        non_intersecting_obstacles)
-    intersecting_freeness_err: float = _intersecting_freenesses_err(
-        intersecting_obstacles,
-        intersecting_freenesses)
-    non_intersecting_freeness_err: float = _non_intersecting_freeness_err(
-        non_intersecting_freenesses)
-    return (intersecting_obstacle_err + non_intersecting_obstacle_err +
-            intersecting_freeness_err + non_intersecting_freeness_err)
+    obstacle_path_array: 'np.ndarray[np.float32]' =
+        _put_obstacles_in_array(obstacles)
+    freeness_array: 'np.ndarray[np.float32]' =
+        _put_freenesses_in_array(freenesses)
+    error_array = np.absolute(obstacle_path_array - freeness_array)
+    return np.sum(error_array)
 
+
+def _put_obstacles_in_array(
+        os: List[w.Obstacle]
+        ) -> 'np.ndarray[np.float32]':
+
+
+def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float32]':
+    blank = np.zeros((1000, 1000))
+    path1, path2 = _obstacle_path_lines(o)
+    perpendicular = _line_right_angle_to_path(o)
+
+
+
+def coordinate_in_rect_path(
+        x: float,
+        y: float,
+        o: w.Obstacle,
+        path1: Line,
+        path2: Line,
+        perpendicular: Line) -> bool:
+    """
+    The function gives 'True' if (x, y) is in the area shaded by X's
+    and false else:
+    
+                        :
+                        : perpendicular
+                        :
+                        :
+                       ___  _  _  _  _  _  _  _  _  _  path1
+                     /  :  \ XXXXXXXXXXXXXXXXXXXXXXXXX
+            ----> v |   o   | XXXXXXXXXXXXXXXXXXXXXXXX
+                     \  :  / XXXXXXXXXXXXXXXXXXXXXXXXX
+              obstacle ---  -  -  -  -  -  -  -  -  -  path2
+                        :
+                        :
+                        :
+                        :
+
+
+    The lines marked 'path1' and 'path2' are the straight lines at the
+    edges of the area travelled over by the obstacle as it moves along.
+    The line marked 'perpendicular' is the line that is perpendicular
+    to the path of the obstacle, and passes through the centre of it
+    when it is at the start position.  The arrow marked 'v' denotes
+    the velocity of the obstacle.
+    """
+    perpendicular_test: bool
+    if o['velocity']['y'] 
+    if o['velocity']['y'] > 0 and path1['c'] < path2['c']:
+        return (
+            y > path1['m'] * x + path1['c'] and
+            y < path2['m'] * x + path2['c'] and
+            y > perpendicular['m'] * x + perpendicular['c'])
+    if o['velocity']['y'] < 0 and path1['c'] < path2['c']:
+        return (
+            y > path1['m'] * x + path1['c'] and
+            y < path2['m'] * x + path2['c'] and
+            y < perpendicular['m'] * x + perpendicular['c'])
+    if o['velocity']['y'] > 0 and path1['c'] > path2['c']:
+        return (
+            y < path1['m'] * x + path1['c'] and
+            y > path2['m'] * x + path2['c'] and
+            y > perpendicular['m'] * x + perpendicular['c'])
+    if o['velocity']['y'] < 0 and path1['c'] < path2['c']:
+        return (
+            y > path1['m'] * x + path1['c'] and
+            y < path2['m'] * x + path2['c'] and
+            y < perpendicular['m'] * x + perpendicular['c'])
+            
+    
+
+def _line_right_angle_to_path(o: w.Obstacle) -> Line:
+    vx = o['velocity']['x']
+    vy = o['velocity']['y']
+    # It's x-component over y-component because I want the line that
+    # is perpendicular to the velocity.
+    m = vx / vy 
+    #
+    #
+    #          y ^
+    #            |                 
+    #    *       |                             /
+    #         *  |                            /        
+    #          c | *           1             /       /
+    #            |      * - - - - - +       /       /
+    #            |           * ϴ    '-m    /       /
+    #            |-+              * '      ___    /
+    #            | |              ϴ    * /     \  
+    #          b |- - - - - - - - - - - ::  o  :: obstacle, 
+    #            |                       \  '  /*   centre at (a, b)
+    #            |                    /    ---       *
+    #            |                   /      /             *
+    #            |                  /      /'                  * 
+    #            |                          '                       *
+    #          0 +--------------------------------------------------->
+    #            0                          a                        x
+    #
+    #    From the diagram:
+    #        tan(ϴ) = m
+    #    and
+    #        tan(ϴ) = (c - b) / a
+    #         c - b = a tan(ϴ)
+    #             c = a tan(ϴ) + b
+    #               = a m + b
+    #
+    a = o['position']['x']
+    b = o['position']['y']
+    return {
+        'm': m,
+        'c': a * m + b }
 
 
 def _intersecting_obstacles_err(
@@ -53,8 +142,11 @@ def _intersecting_obstacles_err(
         ) -> float:
     """
     It works out the error for all the obstacles that have paths that
-    intersect freenesses.
+    intersect freenesses.  This function loops over all the freenesses
+    for each obstacle and works out the 
     """
+
+
 
 def _non_intersecting_freenesses_err(fs: List[Freeness]) -> float:
     """
