@@ -37,31 +37,272 @@ def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float32]':
 
 
 
-def coordinate_in_rect_path(
-        x: float,
-        y: float,
+def _point_in_circle(p: w.Point, c: Circle) -> bool:
+    """ It decides if the point is inside the circle. """
+    return _distance_between(p, c['o']) < c['r']
+
+
+def _straight_lines_identical(L1: Line, L2: Line) -> bool:
+    """ It works out if the straight lines are the same. """
+    if not math.isclose(L1['theta'], L2['theta']):
+        # The lines are not parallel so are not identical.
+        return False
+    x1 = L1['X']['x']
+    y1 = L1['X']['y']
+    x2 = L2['X']['x']
+    y2 = L2['X']['y']
+    if math.isclose(x1, x2) and math.isclose(y1, y2):
+        # The reference points for the lines are in the same place.
+        return True
+    # So if the function has reached this point then we know that the two
+    # points are not in the same place and are on lines that are parallel
+    # or identical.
+    #
+    #                      /
+    #                     /
+    #                    X (x2,y2)
+    #                   /|
+    #                  / |
+    #                 /  |
+    #                /   | y2 - y1
+    #               /    |
+    #              /     |
+    #             / ϴ    | 
+    #    (x1,y1) X-------+
+    #           / x2 - x1
+    #          /
+    #         /
+    #
+    # If (ϴ - π/2) % π = 0 and x2 - x1 = 0 then the lines are
+    # perpendicular and identical.
+    #
+    # If x2 - x1 != 0 then the lines are identical if
+    #
+    #     tan(ϴ) = (y2 - y1) / (x2 - x1)
+    vertical = math.isclose(abs(L1['theta']) % math.pi, math.pi/2)
+    same_x = math.isclose(x1, x2)
+    if vertical and same_x:
+        return True
+    if vertical and not same_x:
+        return False
+    return math.isclose(math.tan(L1['theta']), (y2 - y1) / (x2 - x1))
+
+
+def _perpendicular_distance_between_paralell_lines(
+        L1: Line,
+        L2: Line
+        ) -> float:
+    """ 
+                             /                           
+                            /                            
+                           /                           / 
+                          /                           /  
+                         /                           /   
+                        /                           /    
+                       /                           /     
+                      /                           /      
+                     /                         --X (x2,y2)       
+                    /                      ---/ /|       
+                   /                   ---/    / |       
+                  /            p   ---/       /  |       
+                 /             ---/          /   |       
+                /          ---/             /    | u     
+               /       ---/                /     |       
+              /    ---/                   /      |       
+             / ---/           q          / ϴ     |       
+    (x1,y1) X-/\- - - - - - - - - - - - - - - - -+ 
+           /    ---\                ϴ  /    s            
+          /         ----\             /                  
+         /            x  ---\        /                   
+        /                    ---\   /                    
+       / ϴ                       ---                     
+      /_ _                        /                      
+                                 /                       
+                                /                        
+                               / ϴ                        
+                              /_ _                          
+
+    The definition of a line used in this program is a point on the line
+    and an angle anticlockwise from the positive x-axis.  Since the lines
+    are parallel, the angle is the same for both.  The points are (a,b)
+    and (c,d).  
+
+    Known: ϴ, x1, y1, x2, y2
+
+    Required: x
+
+    From the diagram it can be seen that if q = 0 then x = 0.  If q is not
+    0 then:
+
+        sin(ϴ) = x / q
+             x = q sin(ϴ),
+
+        q + s =  (p² - u²)^0.5
+            q =  (p² - u²)^0.5 - s,
+
+        u = y2 - y1,
+
+        p = (u² + (x2 - x1)²)^0.5.
+        
+
+    If ϴ == π / 2 then s = 0, else:
+
+        tan(ϴ) = u / s
+             s = u / tan(ϴ)
+    """
+    assert math.isclose(L1['theta'], L2['theta'])
+    theta: float = L1['theta']
+    if _straight_lines_identical(L1, L2):
+        return 0
+    u: float = y2 - y1
+    p: float = (u*u + (x2 - x1)**2)**0.5
+    s: float = _calculate_s(theta, u)
+    q: float = (p*p - u*u)**0.5 - s
+    return q * math.sin(theta)
+
+
+def _calculate_s(theta: float, u: float) -> float:
+    if math.isclose(theta, math.pi/2):
+        return 0
+    return u / math.tan(theta)
+
+
+def _is_vertical(L: Line) -> bool:
+    return math.isclose(abs(L['theta']) % math.pi/2, math.pi/2)
+
+
+class MxPlusC(TypedDict):
+    m: float
+    c: float
+
+
+def _mx_plus_c(L: Line) -> Tuple[str, MxPlusC]:
+    if _is_vertical(L):
+        return "Line is vertical so no y-intercept.", None
+    #     
+    #         ^
+    #         |        
+    #         |           X (x,y)
+    #         |          /' 
+    #         |         / '
+    #         |        /  '
+    #         |       /   '
+    #         |      /    '
+    #         |     /     '
+    #         |    /      '
+    #         |   /       '
+    #         |  /        '
+    #         | / ϴ       '
+    #       c |/_ _ _ _ _ +
+    #         |
+    #         |
+    #         +------------------>
+    #
+    #
+    # tan(ϴ) = (y - c) / x
+    #  y - c = x tan(ϴ)
+    #      c = y - x tan(ϴ)
+    tan_theta = math.tan(L['theta'])
+    return (
+        None,
+        {'m': tan_theta,
+         'c': L['X']['y'] - L['X']['x'] * tan_theta})
+
+
+def _solve_MxPlusC(a: MxPlusC, b: MxPlusC) -> w.Point:
+    """
+    It finds the intersection of two non-vertical and non-parallel 
+    straight lines defined by equations of the form y = mx + c.
+
+    Putting y = m1 * x + c1 and y = m2 * x + c2 into wxmaxima gives:
+        x = -(c1 - c2) / (m1 - m2)  
+    and
+        y = (c2 * m1 - c1 * m2) / (m1 - m2).
+    """
+    return {
+        'x': -(a['c'] - b['c']) / (a['m'] - b['c']),
+        'y': (b['c'] * a['m'] - a['c'] * b['m']) / (a['m'] - b['m'])}
+
+
+def _intersection_of(L1: Line, L2: Line) -> Tuple[str, w.Point]:
+    """ It finds the point at the intersection of two straight lines. """
+    err1, L1mc = _mx_plus_c(L1)
+    err2, L2mc = _mx_plus_c(L2)
+    if err1 is not None and err2 is not None:
+        return "Both lines are vertical so no intersection.", None
+    if err1 is not None and err2 is None:
+        return (
+            None,
+            {'x': L1['X']['x'],
+             L2mc['m'] * L1['X']['x'] + L2mc['c']})
+    if err1 is None and err2 is not None:
+        return (
+            None,
+            {'x': L2['X']['x'],
+             L1mc['m'] * L1['X']['x'] + L1mc['c']})
+    if math.isclose(L1mc['m'], L2mc['m']):
+        return "Lines are parallel so do not intersect.", None
+    if err1 is None and err2 is None:
+        return None, _solve_MxPlusC(L1mc, L2mc)
+
+         
+def _perpendicular_distance_of_point_from_line(
+        L: Line,
+        p: w.Point
+        ) -> Tuple[str, float]:
+    err, X = _intersection_of(
+        {'X': p, 'theta': L['theta'] + math.pi/2},
+        L)
+    if err is not None:
+        return err, None
+    return None, _distance_between(X, p)
+
+
+def _point_between_parallel_lines(L1: Line, L2: Line, p: w.Point) -> bool:
+    """ It decides if the point is between the two parallel lines. """
+    d = _perpendicular_distance_between_paralell_lines(L1, L2)
+    p1 = _perpendicular_distance_of_point_from_line(L1, p)
+    p2 = _perpendicular_distance_of_point_from_line(L2, p)
+    return p1 < d and p2 < d
+
+
+def _point_in_front_of_start(o: w.Obstacle, p: w.Point) -> bool:
+    px = p['x']
+    py = p['y']
+    opx = o['position']['x']
+    opy = o['position']['y']
+    ovx = o['velocity']['x']
+    ovy = o['velocity']['y']
+    relx = px - opx
+    rely = py - opy
+    return relx * ovx + rely * opy > 0
+
+
+
+def _point_in_path(
+        p: w.Point
         o: w.Obstacle,
         path1: Line,
         path2: Line,
-        perpendicular: Line) -> bool:
+        perpendicular: Line
+        ) -> bool:
     """
     The function gives 'True' if (x, y) is in the area shaded by X's
-    and false else:
+    and false else.
     
-                        :
-                        : perpendicular
-                        :
-                        :
-                       ___  _  _  _  _  _  _  _  _  _  path1
-                     /  :  \ XXXXXXXXXXXXXXXXXXXXXXXXX
-            ----> v |   o   | XXXXXXXXXXXXXXXXXXXXXXXX
-                     \  :  / XXXXXXXXXXXXXXXXXXXXXXXXX
-              obstacle ---  -  -  -  -  -  -  -  -  -  path2
-                        :
-                        :
-                        :
-                        :
-
+                    :
+                    : perpendicular
+                    :
+                    :
+                   ___  _  _  _  _  _  _  _  _  _  path1
+                 /  :  \ XXXXXXXXXXXXXXXXXXXXXXXXX
+        ---> v  |   o   | XXXXXXXXXXXXXXXXXXXXXXXX
+                 \  :  / XXXXXXXXXXXXXXXXXXXXXXXXX
+          obstacle ---  -  -  -  -  -  -  -  -  -  path2
+                    :
+                    :
+                    :
+                    :
 
     The lines marked 'path1' and 'path2' are the straight lines at the
     edges of the area travelled over by the obstacle as it moves along.
@@ -70,31 +311,14 @@ def coordinate_in_rect_path(
     when it is at the start position.  The arrow marked 'v' denotes
     the velocity of the obstacle.
     """
-    perpendicular_test: bool
-    if o['velocity']['y'] 
-    if o['velocity']['y'] > 0 and path1['c'] < path2['c']:
-        return (
-            y > path1['m'] * x + path1['c'] and
-            y < path2['m'] * x + path2['c'] and
-            y > perpendicular['m'] * x + perpendicular['c'])
-    if o['velocity']['y'] < 0 and path1['c'] < path2['c']:
-        return (
-            y > path1['m'] * x + path1['c'] and
-            y < path2['m'] * x + path2['c'] and
-            y < perpendicular['m'] * x + perpendicular['c'])
-    if o['velocity']['y'] > 0 and path1['c'] > path2['c']:
-        return (
-            y < path1['m'] * x + path1['c'] and
-            y > path2['m'] * x + path2['c'] and
-            y > perpendicular['m'] * x + perpendicular['c'])
-    if o['velocity']['y'] < 0 and path1['c'] < path2['c']:
-        return (
-            y > path1['m'] * x + path1['c'] and
-            y < path2['m'] * x + path2['c'] and
-            y < perpendicular['m'] * x + perpendicular['c'])
+    circle: Circle = {'o': o['position'], 'r': o['radius']}
+    if _point_in_circle(p, circle):
+        return False
+    if not _point_between_parallel_lines(path1, path2, p):
+        return False
+    return _point_in_front_of_start(o, p)
             
     
-
 def _line_right_angle_to_path(o: w.Obstacle) -> Line:
     vx = o['velocity']['x']
     vy = o['velocity']['y']
@@ -255,18 +479,18 @@ def _obstacle_going_towards_freeness(o: w.Obstacle, f: Freeness) -> bool:
     return dot_product_of_rel_pos_vel > 0
 
 
-# Defines a straight line with equation of the form y = mx + c where m is
-# the gradient and c is the y-intercept.
+# Defines a straight line as a point and an angle.  The angle is measured
+# anticlockwise from the positive x-axis.  The reason for not using 
+# y = mx + c is that this is not defined for vertical lines.
 class Line(TypedDict):
-    m: float
-    c: float
+    X: w.Point
+    theta: float
 
 
 # Defines a circle with equation of the form (x - h)² + (y - k)² = r²,
 # where (h, k) is the position of the centre and r is the radius.
 class Circle(TypedDict):
-    h: float
-    k: float
+    o: w.Point
     r: float
 
 
@@ -282,12 +506,12 @@ def _intersections_of_line_and_circle(
     """
     The computer algebra program wxmaxima was used to find the
     intersections of a straight line and a circle, as follows:
-    (%i1)	eq1: (x-h)^2 + (y-k)^2 = r^2;
-    (eq1)	(y-k)^2+(x-h)^2=r^2
-    (%i2)	eq2: y = m*x+c;
-    (eq2)	y=m*x+c
-    (%i3)	solve([eq1, eq2], [x, y]);
-    (%o3)	[[x=(-sqrt((m^2+1)*r^2-h^2*m^2+k*(2*h*m+2*c)-2*c*h*m-k^2-c^2)
+    (%i1)   eq1: (x-h)^2 + (y-k)^2 = r^2;
+    (eq1)   (y-k)^2+(x-h)^2=r^2
+    (%i2)   eq2: y = m*x+c;
+    (eq2)   y=m*x+c
+    (%i3)   solve([eq1, eq2], [x, y]);
+    (%o3)   [[x=(-sqrt((m^2+1)*r^2-h^2*m^2+k*(2*h*m+2*c)-2*c*h*m-k^2-c^2)
                  +k*m-c*m+h)
                 /(m^2+1),
               y=(-m*sqrt((m^2+1)*r^2-h^2*m^2+k*(2*h*m+2*c)-2*c*h*m-k^2-c^2)
@@ -342,6 +566,90 @@ def _line_intersects_circle(L: Line, C: Circle) -> bool:
 
 def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
     """
+    It calculates the parameters of the straight lines, line1 and line2,
+    that border the path of the obstacle.
+
+                          * 
+                       * .....                  *
+              (e,f) *_-^^^^^^^^^-_           *  B 
+                 *.X''           ``-.     *
+     line2    * .-'                 `-.*
+           *   .-'                  *`-.
+        *     .-'                *    `-.
+     *        ::       (a,b)  * ϴ      ::
+              ::           o - - - - + ::           *
+              ::        *    *       | ::        *  D
+              `-.    *         * r   |.-'     *
+               `-.*              * ϴ |-'   *
+               *`-.                *.|' *
+            *     `-..          ..-' X (c,d)
+         *           ^-........-^ *
+      *                  ''''  *
+                            *
+                         *  line1
+                      *
+                   *
+                *
+             *
+
+
+    Knowns: 
+        a, b, r, velocity of obstacle
+
+    Want to know:
+        c, d, ϴ
+
+
+    The line of length r between (a, b) and (c, d) is perpendicular to
+    lines B and D, and to the velocity of the object.  The velocity of
+    the object is known and has components vx and vy.
+
+    If vx != 0 then:
+        tan(ϴ) = vy / vx
+             ϴ = arctan( vy / vx )
+    else:
+        ϴ = π / 2
+    (or nπ / 2 where n = 2, 3, 4, ... but it doesn't matter because
+    the line doesn't have direction).  
+
+    From the diagram it can be seen that:
+        sin(ϴ) = (c - a) / r
+    and
+        cos(ϴ) = (b - d) / r
+    so
+        c - a = r sin(ϴ)
+            c = r sin(ϴ) + a
+    and
+        b - d = r cos(ϴ)
+            d = b - r cos(ϴ)
+    By symmetry,
+        a - e = c - a = r sin(ϴ)
+            e = a - r sin(ϴ)
+    and
+        f - b = b - d = r cos(ϴ)
+            f = r cos(ϴ) + b
+    """
+    vx: float = o['velocity']['x']
+    vy: float = o['velocity']['y']
+    a: float = o['position']['x']
+    b: float = o['position']['y']
+    r: float = o['radius']
+    theta: float
+    if vx != 0:
+        theta = math.atan(vy / vx)
+    else:
+        theta = math.pi / 2
+    c = r * math.sin(theta)
+    d = b - r * math.cos(theta)
+    return (
+        {'X': {'x': c, 'y': d},
+         'theta': theta},
+        {'X': {'x': e, 'y': f},
+         'theta': theta})
+            
+
+def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
+    """
     It calculates the equations of the straight lines that mark the
     edges of the path of the obstacle.  Let these lines be of the form
     y = mx + c then this function calculates m, c1 and c3.
@@ -391,7 +699,7 @@ def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
     #          `-..     |    ..-' *
     #             ^-....|...-^ *
     #                 ''|'  *  ϴ
-    #                    * -----------------
+    #                   +*------------------
     #                 *
     #              *
     #           *
