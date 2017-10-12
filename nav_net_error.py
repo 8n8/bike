@@ -116,7 +116,7 @@ def _velocity_magnitude(v: w.Velocity) -> float:
 def _calculate_time_free_array_element(o: w.Obstacle, p: w.Point) -> float:
     distance_from_centre: float = _distance_between(o['position'], p)
     # speed = distance / time, so time = speed / distance
-    if math.isclose(distance_from_centre, 0):
+    if _isclose(distance_from_centre, 0):
         return 0.0
     return _velocity_magnitude(o['velocity']) / distance_from_centre
 
@@ -148,14 +148,14 @@ def _point_in_circle(p: w.Point, c: Circle) -> bool:
 
 def _straight_lines_identical(L1: Line, L2: Line) -> bool:
     """ It works out if the straight lines are the same. """
-    if not math.isclose(L1['theta'], L2['theta']):
+    if not _isclose(L1['theta'], L2['theta']):
         # The lines are not parallel so are not identical.
         return False
     err1, L1mc = _mx_plus_c(L1)
     err2, L2mc = _mx_plus_c(L2)
     if err1 is None:
-        return math.isclose(L1['X']['x'], L2['X']['x'])
-    return math.isclose(L1mc['c'], L2mc['c'])
+        return _isclose(L1['X']['x'], L2['X']['x'])
+    return _isclose(L1mc['c'], L2mc['c'])
 
 
 def _perpendicular_distance_between_paralell_lines(
@@ -224,7 +224,7 @@ def _perpendicular_distance_between_paralell_lines(
     y1: float = L1['X']['y']
     x2: float = L2['X']['x']
     y2: float = L2['X']['y']
-    assert math.isclose(L1['theta'], L2['theta'])
+    assert _isclose(L1['theta'], L2['theta'])
     theta: float = L1['theta']
     if _straight_lines_identical(L1, L2):
         return 0
@@ -236,13 +236,13 @@ def _perpendicular_distance_between_paralell_lines(
 
 
 def _calculate_s(theta: float, u: float) -> float:
-    if math.isclose(theta, math.pi/2):
+    if _isclose(theta, math.pi/2):
         return 0
     return u / math.tan(theta)
 
 
 def _is_vertical(L: Line) -> bool:
-    return math.isclose(abs(L['theta']) % math.pi/2, math.pi/2)
+    return _isclose(abs(L['theta']) % math.pi/2, math.pi/2)
 
 
 class MxPlusC(TypedDict):
@@ -313,7 +313,7 @@ def _intersection_of(L1: Line, L2: Line) -> Tuple[str, w.Point]:
             None,
             {'x': L2['X']['x'],
              'y': L1mc['m'] * L1['X']['x'] + L1mc['c']})
-    if math.isclose(L1mc['m'], L2mc['m']):
+    if _isclose(L1mc['m'], L2mc['m']):
         return "Lines are parallel so do not intersect.", None
     # if err1 is None and err2 is None:
     return None, _solve_MxPlusC(L1mc, L2mc)
@@ -704,6 +704,11 @@ def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
 
 
 def _tan(theta: float) -> float:
-    if math.isclose(abs(theta) % math.pi, math.pi/2):
+    if _isclose(abs(theta) % math.pi, math.pi/2):
         return None
     return math.tan(theta)
+
+
+def _isclose(a: float, b: float) -> bool:
+    diff = a - b 
+    return diff < 0.0000001 and diff > -0.0000001
