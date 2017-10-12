@@ -26,6 +26,7 @@ class Circle(TypedDict):
 class Line(TypedDict):
     X: w.Point
     theta: float
+    tan_theta: float
 
 
 def main(
@@ -275,11 +276,10 @@ def _mx_plus_c(L: Line) -> Tuple[str, MxPlusC]:
     # tan(ϴ) = (y - c) / x
     #  y - c = x tan(ϴ)
     #      c = y - x tan(ϴ)
-    tan_theta: float = math.tan(L['theta'])
     return (
         None,
-        {'m': tan_theta,
-         'c': L['X']['y'] - L['X']['x'] * tan_theta})
+        {'m': L['tan_theta'],
+         'c': L['X']['y'] - L['X']['x'] * L['tan_theta']})
 
 
 def _solve_MxPlusC(a: MxPlusC, b: MxPlusC) -> w.Point:
@@ -324,7 +324,9 @@ def _perpendicular_distance_of_point_from_line(
         p: w.Point
         ) -> Tuple[str, float]:
     err, X = _intersection_of(
-        {'X': p, 'theta': L['theta'] + math.pi/2},
+        {'X': p,
+         'theta': L['theta'] + math.pi/2,
+         'tan_theta': _tan(L['theta'])},
         L)
     if err is not None:
         return err, None
@@ -691,8 +693,17 @@ def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
     d = b - r * math.cos(theta)
     e = a - r * math.sin(theta)
     f = r * math.cos(theta) + b
+    tan_theta = _tan(theta)
     return (
         {'X': {'x': c, 'y': d},
-         'theta': theta},
+         'theta': theta,
+         'tan_theta': tan_theta},
         {'X': {'x': e, 'y': f},
-         'theta': theta})
+         'theta': theta,
+         'tan_theta': tan_theta})
+
+
+def _tan(theta: float) -> float:
+    if math.isclose(abs(theta) % math.pi, math.pi/2):
+        return None
+    return math.tan(theta)
