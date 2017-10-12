@@ -55,14 +55,13 @@ def _put_freenesses_in_array(
 def _put_freeness_in_array(
         f: Freeness
         ) -> 'np.ndarray[np.float32]':
-    array = np.zeros((1000, 1000))
 
     def point_in_freeness(p: w.Point) -> bool:
         return _point_in_circle(
             p,
             {'o': f['position'], 'r': f['radius']})
 
-    return _np_map_2d(point_in_freeness, array)
+    return _np_map_2d(point_in_freeness)
 
 
 def _put_obstacles_in_array(
@@ -87,7 +86,7 @@ def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float32]':
 
     def point_in_path(p: w.Point) -> bool:
         return _point_in_path(p, o)
-    path: 'np.ndarray[np.float32]' = _np_map_2d(point_in_path, array)
+    path: 'np.ndarray[np.float32]' = _np_map_2d_bool(point_in_path)
     # It has 1s where the obstacle currently is and 0s elsewhere.
 
     def _point_in_obstacle(p: w.Point) -> bool:
@@ -95,16 +94,15 @@ def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float32]':
             p,
             {'o': o['position'], 'r': o['radius']})
 
-    current_position: 'np.ndarray[np.float32]' = _np_map_2d(
-        _point_in_obstacle,
-        array)
+    current_position: 'np.ndarray[np.float32]' = _np_map_2d_bool(
+        _point_in_obstacle)
 
     def _calculate_time_free_array(p: w.Point) -> float:
         return _calculate_time_free_array_element(o, p)
 
     time_free: 'np.ndarray[np.float32]' = _np_map_2d(
-        _calculate_time_free_array,
-        array)
+        _calculate_time_free_array)
+    print(current_position)
     result: 'np.ndarray[np.float32]' = (  # type: ignore
         path * time_free + array * ~current_position * ~path)
     return result
@@ -124,13 +122,22 @@ def _calculate_time_free_array_element(o: w.Obstacle, p: w.Point) -> float:
 
 def _np_map_2d(
         function_of_position,
-        twoD_array: 'np.ndarray[np.float32]'
         ) -> 'np.ndarray[np.float32]':
-    sh = twoD_array.shape
-    for x in range(sh[0]):
-        for y in range(sh[1]):
-            twoD_array[x][y] = function_of_position({'x': x, 'y': y})
-    return twoD_array
+    new = np.zeros((1000, 1000))
+    for x in range(1000):
+        for y in range(1000):
+            new[x][y] = function_of_position({'x': x, 'y': y})
+    return new
+
+
+def _np_map_2d_bool(
+        function_of_position,
+        ) -> 'np.ndarray[np.float32]':
+    new = np.zeros((1000, 1000), dtype=np.bool)  # type: ignore
+    for x in range(1000):
+        for y in range(1000):
+            new[x][y] = function_of_position({'x': x, 'y': y})
+    return new
 
 
 def _point_in_circle(p: w.Point, c: Circle) -> bool:
@@ -143,54 +150,11 @@ def _straight_lines_identical(L1: Line, L2: Line) -> bool:
     if not math.isclose(L1['theta'], L2['theta']):
         # The lines are not parallel so are not identical.
         return False
-    x1: float = L1['X']['x']
-    y1: float = L1['X']['y']
-    x2: float = L2['X']['x']
-    y2: float = L2['X']['y']
-    if math.isclose(x1, x2) and math.isclose(y1, y2):
-        # The reference points for the lines are in the same place.
-        return True
-    # So if the function has reached this point then we know that the two
-    # points are not in the same place and are on lines that are parallel
-    # or identical.
-    #
-    #                      /
-    #                     /
-    #                    X (x2,y2)
-    #                   /|
-    #                  / |
-    #                 /  |
-    #                /   | y2 - y1
-    #               /    |
-    #              /     |
-    #             / ϴ    |
-    #    (x1,y1) X-------+
-    #           / x2 - x1
-    #          /
-    #         /
-    #
-    # If ϴ % π = π/2 and x2 - x1 = 0 then the lines are
-    # perpendicular and identical.
-    
-    If x2 - x1 == 0 then the lines are not identical 
-
-    #
-    # If x2 - x1 != 0 then the lines are identical if
-    #
-    #     tan(ϴ) = (y2 - y1) / (x2 - x1)
-    vertical: bool = math.isclose(abs(L1['theta']) % math.pi, math.pi/2)
-    same_x: bool = math.isclose(x1, x2)
-    print('x1 is {}'.format(x1))
-    print('x2 is {}'.format(x2))
-    print('theta is {}'.format(L1['theta']))
-    print('L1 is {}'.format(L1))
-    print('L2 is {}'.format(L2))
-    print(same_x)
-    if vertical and same_x:
-        return True
-    if vertical and not same_x:
-        return False
-    return math.isclose(math.tan(L1['theta']), (y2 - y1) / (x2 - x1))
+    err1, L1mc = _mx_plus_c(L1)
+    err2, L2mc = _mx_plus_c(L2)
+    if err1 is None:
+        return math.isclose(L1['X']['x'], L2['X']['x'])
+    return math.isclose(L1mc['c'], L2mc['c'])
 
 
 def _perpendicular_distance_between_paralell_lines(
