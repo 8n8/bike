@@ -1,6 +1,6 @@
 from mypy_extensions import TypedDict
 import math
-import numpy as np
+import numpy as np  # type: ignore
 from typing import (List, Tuple)
 import world2sensor as w
 
@@ -33,29 +33,24 @@ def main(
         obstacles: List[w.Obstacle],
         freenesses: List[Freeness]
         ) -> float:
-    obstacle_path_array: 'np.ndarray[np.float32]' = (
+    obstacle_path_array = (
         _put_obstacles_in_array(obstacles))
-    freeness_array: 'np.ndarray[np.float32]' = (
+    freeness_array = (
         _put_freenesses_in_array(freenesses))
-    error_array: 'np.ndarray[np.float32]' = np.absolute(  # type: ignore
+    error_array = np.absolute(  # type: ignore
         obstacle_path_array - freeness_array)
     return np.sum(error_array)  # type: ignore
 
 
-def _put_freenesses_in_array(
-        fs: List[Freeness]
-        ) -> 'np.ndarray[np.float32]':
-    array: 'np.ndarray[np.float32]' = (  # type: ignore
-        np.ones((1000, 1000)) * 1000_000.0)
+def _put_freenesses_in_array(fs: List[Freeness]):
+    array = np.ones((1000, 1000)) * 1000_000.0
     for f in fs:
         array = np.minimum(  # type: ignore
             _put_freeness_in_array(f), array)
     return array
 
 
-def _put_freeness_in_array(
-        f: Freeness
-        ) -> 'np.ndarray[np.float32]':
+def _put_freeness_in_array(f: Freeness):
 
     def point_in_freeness(p: w.Point) -> bool:
         return _point_in_circle(
@@ -65,11 +60,8 @@ def _put_freeness_in_array(
     return _np_map_2d(point_in_freeness)
 
 
-def _put_obstacles_in_array(
-        os: List[w.Obstacle]
-        ) -> 'np.ndarray[np.float32]':
-    array: 'np.ndarray[np.float32]' = (  # type: ignore
-        np.ones((1000, 1000)) * 1000_000.0)
+def _put_obstacles_in_array(os: List[w.Obstacle]):
+    array = np.ones((1000, 1000)) * 1000_000.0
     for o in os:
         array = np.minimum(  # type: ignore
             array,
@@ -77,17 +69,15 @@ def _put_obstacles_in_array(
     return array
 
 
-def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float32]':
+def _put_obstacle_in_array(o: w.Obstacle):
     # Note that the 1000,000 is not special.  It was chosen because
     # it is a high number, because of the assumption that unless an
     # area is marked as soon-to-be-occupied it is free for a long time.
-    array: 'np.ndarray[np.float32]' = (np.ones(  # type: ignore
-        (1000, 1000)) * 1000_000.0)
+    array = np.ones((1000, 1000)) * 1000_000.0
     # It has 1s in the areas the obstacle travels over and 0s elsewhere.
 
     def point_in_path(p: w.Point) -> bool:
         return _point_in_path(p, o)
-    path: 'np.ndarray[np.float32]' = _np_map_2d_bool(point_in_path)
     # It has 1s where the obstacle currently is and 0s elsewhere.
 
     def _point_in_obstacle(p: w.Point) -> bool:
@@ -95,18 +85,100 @@ def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float32]':
             p,
             {'o': o['position'], 'r': o['radius']})
 
-    current_position: 'np.ndarray[np.float32]' = _np_map_2d_bool(
+    current_position = _np_map_2d_bool(
         _point_in_obstacle)
+
+    path = _mark_obstacle_path(o) * ~current_position
+    # _np_map_2d_bool(point_in_path)
 
     def _calculate_time_free_array(p: w.Point) -> float:
         return _calculate_time_free_array_element(o, p)
 
-    time_free: 'np.ndarray[np.float32]' = _np_map_2d(
-        _calculate_time_free_array)
+    time_free = _np_map_2d(_calculate_time_free_array)
     print(current_position)
-    result: 'np.ndarray[np.float32]' = (  # type: ignore
-        path * time_free + array * ~current_position * ~path)
+    result = path * time_free + array * ~current_position * ~path
     return result
+
+
+def _mark_circle(c: Circle):
+    xy_range = np.arange(1000)  # type: ignore
+    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)  # type: ignore
+    distance_from_circle = ((x_matrix - c['o']['x'])**2
+                            + (y_matrix - c['o']['y'])**2)**0.5
+    return distance_from_circle < c['r']
+
+
+def _distance_from_line(L):
+    xy_range = np.arange(1000)
+    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)
+    if _isclose(L['theta'] % math.pi, math.pi/2):
+        # The line is vertical.
+        return np.abs(x_matrix - L['X']['x'])
+    if _isclose(L['theta'] % math.pi, 0):
+        # The line is horizontal.
+        return np.abs(y_matrix - L['X']['y'])
+
+    #        ^
+    #        |
+    #        |
+    #        |      (a,b)                        *
+    #        |       X                        *
+    #        |        *                    * y = mx + c
+    #        |      *                   *
+    #        |          * d          *
+    #        |                    *
+    #        |  h *        *   *
+    #        |              *
+    #        |           *
+    #        |  * α   *
+    #        |     *
+    #        |  *  ϴ = arctan(m)
+    #      c X - - - - - - -
+    #        |
+    #        |
+    #        +----------------------------------------->
+    #
+    #
+    #    Knowns:
+    #        ϴ, m, c, a, b
+    #
+    #    Wanted:
+    #        d
+    #
+    #    From the diagram it can be seen that
+    #
+    #        sin α = d / h
+    #            d = h sin α
+    #
+    #        h = (a² + (b - c)²) ^ 0.5
+    #
+    #        sin(α + ϴ) = (b - c) / h
+    #             α + ϴ = arcsin((b - c) / h)
+    #                 α = arcsin((b - c) / h) - ϴ
+    _, mxPc = _mx_plus_c(L)
+    b_c = y_matrix - mxPc['c']
+    h = (x_matrix**2 + b_c**2)**0.5
+    alpha = np.arcsin(b_c / h) - math.atan(mxPc['m'])
+    d = h * np.sin(alpha)
+    return d
+
+
+def _in_front_of_start(o: w.Obstacle):
+    xy_range = np.arange(1000)  # type: ignore
+    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)  # type: ignore
+    relx = x_matrix - o['position']['x']
+    rely = y_matrix - o['position']['y']
+    ovx = o['velocity']['x']
+    ovy = o['velocity']['y']
+    return relx * ovx + rely * ovy > 0
+
+
+def _mark_obstacle_path(o: w.Obstacle):
+    L1, L2 = _obstacle_path_lines(o)
+    d: float = _perpendicular_distance_between_paralell_lines(L1, L2)
+    d1_from_line = _distance_from_line(L1)
+    d2_from_line = _distance_from_line(L2)
+    return (d1_from_line < d) * (d2_from_line < d) * _in_front_of_start(o)
 
 
 def _velocity_magnitude(v: w.Velocity) -> float:
@@ -121,9 +193,7 @@ def _calculate_time_free_array_element(o: w.Obstacle, p: w.Point) -> float:
     return _velocity_magnitude(o['velocity']) / distance_from_centre
 
 
-def _np_map_2d(
-        function_of_position,
-        ) -> 'np.ndarray[np.float32]':
+def _np_map_2d(function_of_position):
     new = np.zeros((1000, 1000))
     for x in range(1000):
         for y in range(1000):
@@ -131,9 +201,7 @@ def _np_map_2d(
     return new
 
 
-def _np_map_2d_bool(
-        function_of_position,
-        ) -> 'np.ndarray[np.float32]':
+def _np_map_2d_bool(function_of_position):
     new = np.zeros((1000, 1000), dtype=np.bool)  # type: ignore
     for x in range(1000):
         for y in range(1000):
@@ -710,5 +778,5 @@ def _tan(theta: float) -> float:
 
 
 def _isclose(a: float, b: float) -> bool:
-    diff = a - b 
+    diff = a - b
     return diff < 0.0000001 and diff > -0.0000001
