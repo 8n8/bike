@@ -69,6 +69,7 @@ def _put_obstacles_in_array(os: List[w.Obstacle]):
     return array
 
 
+@profile
 def _put_obstacle_in_array(o: w.Obstacle):
     # Note that the 1000,000 is not special.  It was chosen because
     # it is a high number, because of the assumption that unless an
@@ -85,8 +86,9 @@ def _put_obstacle_in_array(o: w.Obstacle):
             p,
             {'o': o['position'], 'r': o['radius']})
 
-    current_position = _np_map_2d_bool(
-        _point_in_obstacle)
+    current_position = _mark_circle({'o': o['position'], 'r': o['radius']})
+    # _np_map_2d_bool(
+    #    _point_in_obstacle)
 
     path = _mark_obstacle_path(o) * ~current_position
     # _np_map_2d_bool(point_in_path)
@@ -95,7 +97,6 @@ def _put_obstacle_in_array(o: w.Obstacle):
         return _calculate_time_free_array_element(o, p)
 
     time_free = _np_map_2d(_calculate_time_free_array)
-    print(current_position)
     result = path * time_free + array * ~current_position * ~path
     return result
 

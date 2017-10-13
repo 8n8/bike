@@ -1,4 +1,3 @@
-import cProfile
 import nav_net_error as v
 import world2sensor as w  # noqa: F401
 
@@ -27,4 +26,5 @@ def main():
     v.main([obstacle], [largefreeness])
 
 
-cProfile.run('main()')
+main()
+# cProfile.run('main()')
