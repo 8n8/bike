@@ -27,8 +27,6 @@ class Line(TypedDict):
     X: w.Point
     theta: float
     tan_theta: float
-    cos_theta: float
-    sin_theta: float
 
 
 def main(
@@ -325,13 +323,10 @@ def _perpendicular_distance_of_point_from_line(
         L: Line,
         p: w.Point
         ) -> Tuple[str, float]:
-    theta = L['theta'] + math.pi/2
     err, X = _intersection_of(
         {'X': p,
-         'theta': theta,
-         'tan_theta': _tan(theta),
-         'cos_theta': math.cos(theta),
-         'sin_theta': math.sin(theta)},
+         'theta': L['theta'] + math.pi/2,
+         'tan_theta': _tan(L['theta'])},
         L)
     if err is not None:
         return err, None
@@ -699,19 +694,13 @@ def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
     e = a - r * math.sin(theta)
     f = r * math.cos(theta) + b
     tan_theta = _tan(theta)
-    cos_theta = math.cos(theta)
-    sin_theta = math.sin(theta)
     return (
         {'X': {'x': c, 'y': d},
          'theta': theta,
-         'tan_theta': tan_theta,
-         'cos_theta': cos_theta,
-         'sin_theta': sin_theta},
+         'tan_theta': tan_theta},
         {'X': {'x': e, 'y': f},
          'theta': theta,
-         'tan_theta': tan_theta,
-         'cos_theta': cos_theta,
-         'sin_theta': sin_theta})
+         'tan_theta': tan_theta})
 
 
 def _tan(theta: float) -> float:
@@ -721,5 +710,5 @@ def _tan(theta: float) -> float:
 
 
 def _isclose(a: float, b: float) -> bool:
-    diff = a - b
+    diff = a - b 
     return diff < 0.0000001 and diff > -0.0000001
