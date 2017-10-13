@@ -29,6 +29,7 @@ class Line(TypedDict):
     tan_theta: float
 
 
+@profile
 def main(
         obstacles: List[w.Obstacle],
         freenesses: List[Freeness]
@@ -51,13 +52,15 @@ def _put_freenesses_in_array(fs: List[Freeness]):
 
 
 def _put_freeness_in_array(f: Freeness):
+    return (_mark_circle({'o': f['position'], 'r': f['radius']}) *
+            f['free_time'])
 
-    def point_in_freeness(p: w.Point) -> bool:
-        return _point_in_circle(
-            p,
-            {'o': f['position'], 'r': f['radius']})
+    # def point_in_freeness(p: w.Point) -> bool:
+    #     return _point_in_circle(
+    #         p,
+    #         {'o': f['position'], 'r': f['radius']})
 
-    return _np_map_2d(point_in_freeness)
+    # return _np_map_2d(point_in_freeness)
 
 
 def _put_obstacles_in_array(os: List[w.Obstacle]):
@@ -69,7 +72,6 @@ def _put_obstacles_in_array(os: List[w.Obstacle]):
     return array
 
 
-@profile
 def _put_obstacle_in_array(o: w.Obstacle):
     # Note that the 1000,000 is not special.  It was chosen because
     # it is a high number, because of the assumption that unless an
