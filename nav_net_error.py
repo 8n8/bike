@@ -90,13 +90,15 @@ def _put_obstacle_in_array(o: w.Obstacle):
     # _np_map_2d_bool(
     #    _point_in_obstacle)
 
-    path = _mark_obstacle_path(o) * ~current_position
+    path = _mark_obstacle_path(o)
+    path = path * ~current_position
     # _np_map_2d_bool(point_in_path)
 
     def _calculate_time_free_array(p: w.Point) -> float:
         return _calculate_time_free_array_element(o, p)
 
-    time_free = _np_map_2d(_calculate_time_free_array)
+    time_free = _make_time_free_array(o)
+    # _np_map_2d(_calculate_time_free_array)
     result = path * time_free + array * ~current_position * ~path
     return result
 
@@ -184,6 +186,16 @@ def _mark_obstacle_path(o: w.Obstacle):
 
 def _velocity_magnitude(v: w.Velocity) -> float:
     return v['x']**2 + v['y']**2
+
+
+def _make_time_free_array(o: w.Obstacle):
+    xy_range = np.arange(1000)  # type: ignore
+    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)  # type: ignore
+    distance_from_centre = ((x_matrix - o['position']['x'])**2 +
+                            (y_matrix - o['position']['y'])**2)**0.5
+    close2centre = np.isclose(distance_from_centre, np.zeros((1000, 1000)))  # type: ignore
+    velocity_mag = _velocity_magnitude(o['velocity'])
+    return ~close2centre * velocity_mag / (close2centre + distance_from_centre)
 
 
 def _calculate_time_free_array_element(o: w.Obstacle, p: w.Point) -> float:
