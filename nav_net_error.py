@@ -110,8 +110,8 @@ def _put_obstacle_in_array(o: w.Obstacle):
 
 def _mark_circle(c: Circle):
     distance_from_circle = ((X_MATRIX - c['o']['x'])**2
-                            + (Y_MATRIX - c['o']['y'])**2)**0.5
-    return distance_from_circle < c['r']
+                            + (Y_MATRIX - c['o']['y'])**2)
+    return distance_from_circle < c['r']**2
 
 
 def _distance_from_line(L):
