@@ -4,6 +4,9 @@ import numpy as np  # type: ignore
 from typing import (List, Tuple)
 import world2sensor as w
 
+XY_RANGE = np.arange(1000)  # type: ignore
+X_MATRIX, Y_MATRIX = np.meshgrid(XY_RANGE, XY_RANGE)  # type: ignore
+
 
 # It defines a circle on the ground with the amount of time it will be
 # free to drive over.
@@ -106,22 +109,18 @@ def _put_obstacle_in_array(o: w.Obstacle):
 
 
 def _mark_circle(c: Circle):
-    xy_range = np.arange(1000)  # type: ignore
-    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)  # type: ignore
-    distance_from_circle = ((x_matrix - c['o']['x'])**2
-                            + (y_matrix - c['o']['y'])**2)**0.5
+    distance_from_circle = ((X_MATRIX - c['o']['x'])**2
+                            + (Y_MATRIX - c['o']['y'])**2)**0.5
     return distance_from_circle < c['r']
 
 
 def _distance_from_line(L):
-    xy_range = np.arange(1000)
-    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)
     if _isclose(L['theta'] % math.pi, math.pi/2):
         # The line is vertical.
-        return np.abs(x_matrix - L['X']['x'])
+        return np.abs(X_MATRIX - L['X']['x'])
     if _isclose(L['theta'] % math.pi, 0):
         # The line is horizontal.
-        return np.abs(y_matrix - L['X']['y'])
+        return np.abs(Y_MATRIX - L['X']['y'])
 
     #        ^
     #        |
@@ -161,18 +160,16 @@ def _distance_from_line(L):
     #             α + ϴ = arcsin((b - c) / h)
     #                 α = arcsin((b - c) / h) - ϴ
     _, mxPc = _mx_plus_c(L)
-    b_c = y_matrix - mxPc['c']
-    h = (x_matrix**2 + b_c**2)**0.5
+    b_c = Y_MATRIX - mxPc['c']
+    h = (X_MATRIX**2 + b_c**2)**0.5
     alpha = np.arcsin(b_c / h) - math.atan(mxPc['m'])
     d = h * np.sin(alpha)
     return d
 
 
 def _in_front_of_start(o: w.Obstacle):
-    xy_range = np.arange(1000)  # type: ignore
-    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)  # type: ignore
-    relx = x_matrix - o['position']['x']
-    rely = y_matrix - o['position']['y']
+    relx = X_MATRIX - o['position']['x']
+    rely = Y_MATRIX - o['position']['y']
     ovx = o['velocity']['x']
     ovy = o['velocity']['y']
     return relx * ovx + rely * ovy > 0
@@ -191,13 +188,13 @@ def _velocity_magnitude(v: w.Velocity) -> float:
 
 
 def _make_time_free_array(o: w.Obstacle):
-    xy_range = np.arange(1000)  # type: ignore
-    x_matrix, y_matrix = np.meshgrid(xy_range, xy_range)  # type: ignore
-    distance_from_centre = ((x_matrix - o['position']['x'])**2 +
-                            (y_matrix - o['position']['y'])**2)**0.5
-    close2centre = np.isclose(distance_from_centre, np.zeros((1000, 1000)))  # type: ignore
+    distance_from_centre = ((X_MATRIX - o['position']['x'])**2 +
+                            (Y_MATRIX - o['position']['y'])**2)**0.5
+    #close2centre = np.isclose(distance_from_centre, np.zeros((1000, 1000)))  # type: ignore
     velocity_mag = _velocity_magnitude(o['velocity'])
-    return ~close2centre * velocity_mag / (close2centre + distance_from_centre)
+    # return ~close2centre * velocity_mag / (close2centre + distance_from_centre)
+    with np.errstate(divide='ignore'):
+        return np.nan_to_num(velocity_mag / distance_from_centre)
 
 
 def _calculate_time_free_array_element(o: w.Obstacle, p: w.Point) -> float:
