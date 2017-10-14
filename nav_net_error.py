@@ -1,9 +1,12 @@
+# It exposes one function that is used for calculating the error of the
+# output of the navigation neural net.
+
+
 import math
 from mypy_extensions import TypedDict
 import numpy as np  # type: ignore
 from typing import (List, Tuple)
 import world2sensor as w
-from PIL import Image
 
 
 XY_RANGE = np.arange(-100, 100, 0.2)  # type: ignore
@@ -31,46 +34,67 @@ class Circle(TypedDict):
 class Line(TypedDict):
     X: w.Point
     theta: float
-    tan_theta: float
+    tan_theta: float  # gradient
 
 
 def main(
         obstacles: List[w.Obstacle],
         freenesses: List[Freeness]
         ) -> float:
-    obstacle_path_array = (
+    """
+    It uses the list of obstacles from the world state and the list of
+    freenesses produced by the navigation neural net and calculates the
+    error.  This error is then used to train the net.  The neural net works
+    by placing circular markers of varying sizes on the ground, each
+    rated with the time till it is occupied by an obstacle.  These markers
+    have been given the name 'freenesses' in this program.  Areas that
+    do not have freenesses in them are assumed to be free.
+
+    The approach in this module is to limit the world area that is
+    considered to a 200m x 200m square divided up into 20cm grid squares.
+    This is represented by a 2D array.  The obstacle paths are mapped onto
+    this array by putting the shortest time of arrival of an obstacle in
+    each cell and a high value (1000) in all the cells that are not
+    travelled over.  The freenesses created by the neural net are mapped
+    onto a similarly-shaped array.  The two arrays are then subtracted
+    from each other cell by cell, the absolute value is taken for each
+    cell, and all the cells are added up to give the final error value.
+    """
+    obstacle_path_array: 'np.ndarray[np.float64]' = (
         _put_obstacles_in_array(obstacles))
-    # display_image(obstacle_path_array)
-    freeness_array = (
+    freeness_array: 'np.ndarray[np.float64]' = (
         _put_freenesses_in_array(freenesses))
-    error_array = np.absolute(  # type: ignore
+    error_array: 'np.ndarray[np.float64]' = np.absolute(  # type: ignore
         obstacle_path_array - freeness_array)
     return np.sum(error_array)  # type: ignore
 
 
-def display_image(arr):
-    print(np.max(arr))
-    greyim = (arr*255.0 / 1000.0).astype(np.uint8)
-    print(np.max(greyim))
-    img = Image.fromarray(greyim)
-    img.show()
-
-
-def _put_freenesses_in_array(fs: List[Freeness]):
-    array = np.ones((1000, 1000)) * 1000.0
+def _put_freenesses_in_array(
+        fs: List[Freeness]
+        ) -> 'np.ndarray[np.float64]':
+    """
+    It loops over the list of freenesses and puts them in the array
+    representing the map of the surface.  If they overlap then the one
+    with the lower time rating is used in the overlapping area.
+    """
+    array: 'np.ndarray[np.float64]' = (  # type: ignore
+        np.ones((1000, 1000)) * 1000.0)
     for f in fs:
         array = np.minimum(  # type: ignore
             _put_freeness_in_array(f), array)
     return array
 
 
-def _put_freeness_in_array(f: Freeness):
-    return (_mark_circle({'o': f['position'], 'r': f['radius']}) *
-            f['free_time'])
+def _put_freeness_in_array(f: Freeness) -> 'np.ndarray[np.float32]':
+    return (_mark_circle({'o': f['position'],  # type: ignore
+                          'r': f['radius']}) * f['free_time'])
 
 
-def _put_obstacles_in_array(os: List[w.Obstacle]):
-    array = np.ones((1000, 1000)) * 1000.0
+def _put_obstacles_in_array(
+        os: List[w.Obstacle]
+        ) -> 'np.ndarray[np.float64]':
+    array: 'np.ndarray[np.float64]' = (  # type: ignore
+        np.ones((1000, 1000)) * 1000.0)
     for o in os:
         array = np.minimum(  # type: ignore
             array,
@@ -78,30 +102,38 @@ def _put_obstacles_in_array(os: List[w.Obstacle]):
     return array
 
 
-def _put_obstacle_in_array(o: w.Obstacle):
-    # Note that the 1000,000 is not special.  It was chosen because
+def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float64]':
+    # Note that the 1000 is not special.  It was chosen because
     # it is a high number, because of the assumption that unless an
     # area is marked as soon-to-be-occupied it is free for a long time.
-    array = np.ones((1000, 1000)) * 1000.0
-    current_position = _mark_circle({'o': o['position'], 'r': o['radius']})
-    path = _mark_obstacle_path(o)
-    time_free = _make_time_free_array(o)
-    return path * time_free + array * ~current_position * ~path
+    array: 'np.ndarray[np.float64]' = (  # type: ignore
+        np.ones((1000, 1000)) * 1000.0)
+    current_position: 'np.ndarray[np.bool]' = (  # type: ignore
+        _mark_circle({'o': o['position'], 'r': o['radius']}))
+    path: 'np.ndarray[np.bool]' = _mark_obstacle_path(o)  # type: ignore
+    time_free: 'np.ndarray[np.float64]' = (
+        _make_time_free_array(o))
+    return (path * time_free +  # type: ignore
+            array * ~current_position * ~path)
 
 
-def _mark_circle(c: Circle):
-    distance_from_circle = ((X_MATRIX - c['o']['x'])**2
-                            + (Y_MATRIX - c['o']['y'])**2)
-    return distance_from_circle < c['r']**2
+def _mark_circle(c: Circle) -> 'np.ndarray[np.bool]':  # type: ignore
+    distance_from_circle: 'np.ndarray[np.float64]' = (
+        (X_MATRIX - c['o']['x'])**2 + (Y_MATRIX - c['o']['y'])**2)
+    return distance_from_circle < c['r']**2  # type: ignore
 
 
-def _squared_distance_from_line(L):
+def _squared_distance_from_line(L) -> 'np.ndarray[np.float64]':
+    """
+    It makes an array each element of which is the distance of that
+    element from the given straight line.
+    """
     if _isclose(L['theta'] % math.pi, math.pi/2):
         # The line is vertical.
-        return np.abs(X_MATRIX - L['X']['x'])
+        return np.abs(X_MATRIX - L['X']['x'])  # type: ignore
     if _isclose(L['theta'] % math.pi, 0):
         # The line is horizontal.
-        return np.abs(Y_MATRIX - L['X']['y'])
+        return np.abs(Y_MATRIX - L['X']['y'])  # type: ignore
     #
     #        ^
     #        |
@@ -140,47 +172,69 @@ def _squared_distance_from_line(L):
     #        sin(α + ϴ) = (b - c) / h
     #             α + ϴ = arcsin((b - c) / h)
     #                 α = arcsin((b - c) / h) - ϴ
+
+    # Don't care about the error, since the case of the line being
+    # vertical has been dealt with already.
     _, mxPc = _mx_plus_c(L)
-    b_c = Y_MATRIX - mxPc['c']
-    h = (X_MATRIX**2 + b_c**2)**0.5
-    alpha = np.arcsin(b_c / h) - math.atan(mxPc['m'])
-    d = h * np.sin(alpha)
+    b_c: 'np.ndarray[np.float64]' = Y_MATRIX - mxPc['c']
+    h: 'np.ndarray[np.float64]' = (X_MATRIX**2 + b_c**2)**0.5
+    alpha: 'np.ndarray[np.float64]' = (
+        np.arcsin(b_c / h) - math.atan(mxPc['m']))  # type: ignore
+    d: 'np.ndarray[np.float64]' = h * np.sin(alpha)  # type: ignore
     return d
 
 
-def _in_front_of_start(o: w.Obstacle):
-    relx = X_MATRIX - o['position']['x']
-    rely = Y_MATRIX - o['position']['y']
-    ovx = o['velocity']['x']
-    ovy = o['velocity']['y']
-    return relx * ovx + rely * ovy > 0
+def _in_front_of_start(
+        o: w.Obstacle) -> 'np.ndarray[np.bool]':  # type: ignore
+    """
+    It marks the area on the array that is in front of the centre of the
+    obstacle in its start position.
+    """
+    relx: 'np.ndarray[np.float64]' = X_MATRIX - o['position']['x']
+    rely: 'np.ndarray[np.float64]' = Y_MATRIX - o['position']['y']
+    ovx: float = o['velocity']['x']
+    ovy: float = o['velocity']['y']
+    return relx * ovx + rely * ovy > 0  # type: ignore
 
 
-def _mark_obstacle_path(o: w.Obstacle):
+def _mark_obstacle_path(
+        o: w.Obstacle
+        ) -> 'np.ndarray[np.bool]':  # type: ignore
+    """
+    It marks the path of the obstacle on the big array that maps the
+    surface.
+    """
     L1, L2 = _obstacle_path_lines(o)
     d: float = _perpendicular_distance_between_paralell_lines(L1, L2)
-    d2 = d*d
-    d1_from_line = _squared_distance_from_line(L1)
-    d2_from_line = _squared_distance_from_line(L2)
-    return ((d1_from_line < d2) * (d2_from_line < d2) *
+    d2: float = d*d
+    d1_from_line: 'np.ndarray[np.float64]' = (
+        _squared_distance_from_line(L1))
+    d2_from_line: 'np.ndarray[np.float64]' = (
+        _squared_distance_from_line(L2))
+    return ((d1_from_line < d2) * (d2_from_line < d2) *  # type: ignore
             _in_front_of_start(o))
 
 
-def _velocity_magnitude(v: w.Velocity) -> float:
-    return (v['x']**2 + v['y']**2)**0.5
+def _velocity_magnitude_squared(v: w.Velocity) -> float:
+    return (v['x']**2 + v['y']**2)
 
 
-def _make_time_free_array(o: w.Obstacle):
-    distance_from_centre = ((X_MATRIX - o['position']['x'])**2 +
-                            (Y_MATRIX - o['position']['y'])**2)**0.5
-    velocity_mag = _velocity_magnitude(o['velocity'])
+def _make_time_free_array(o: w.Obstacle) -> 'np.ndarray[np.float64]':
+    """
+    It makes a 2D array that represents a map of the ground.  Each
+    cell has a number in it that is the amount of time that the obstacle
+    would take to get there if it was travelling in that direction.
+    """
+    distance_from_centre_squared: 'np.ndarray[np.float64]' = (
+        (X_MATRIX - o['position']['x'])**2 +
+        (Y_MATRIX - o['position']['y'])**2)
+    velocity_mag_sq: float = _velocity_magnitude_squared(o['velocity'])
     with np.errstate(divide='ignore'):  # type: ignore
-        return np.nan_to_num(velocity_mag  # type: ignore
-                             / distance_from_centre)
+        return np.nan_to_num(velocity_mag_sq   # type: ignore
+                             / distance_from_centre_squared)
 
 
 def _straight_lines_identical(L1: Line, L2: Line) -> bool:
-    """ It works out if the straight lines are the same. """
     if _isclose(L1['theta'], L2['theta']):
         # The lines are not parallel so are not identical.
         return False
@@ -274,6 +328,7 @@ def _calculate_s(theta: float, u: float) -> float:
 
 
 def _is_vertical(L: Line) -> bool:
+    """ It calculates if the given line is vertical. """
     return _isclose(abs(L['theta']) % math.pi/2, math.pi/2)
 
 
@@ -283,6 +338,12 @@ class MxPlusC(TypedDict):
 
 
 def _mx_plus_c(L: Line) -> Tuple[str, MxPlusC]:
+    """
+    It calculates the y-intercept and gradient of a straight line.  The
+    output is a tuple.  The first element is an error message, or None
+    if all is OK.  The second element is the desired value, or None if
+    there is an error.
+    """
     if _is_vertical(L):
         return "Line is vertical so no y-intercept.", None
     #
@@ -354,7 +415,7 @@ def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
         a, b, r, velocity of obstacle
 
     Want to know:
-        c, d, ϴ
+        c, d, ϴ, e, f
 
     The line of length r between (a, b) and (c, d) is perpendicular to
     lines B and D, and to the velocity of the object.  The velocity of
@@ -395,11 +456,11 @@ def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
         theta = math.atan(vy / vx)
     else:
         theta = math.pi / 2
-    c = r * math.sin(theta)
-    d = b - r * math.cos(theta)
-    e = a - r * math.sin(theta)
-    f = r * math.cos(theta) + b
-    tan_theta = _tan(theta)
+    c: float = r * math.sin(theta)
+    d: float = b - r * math.cos(theta)
+    e: float = a - r * math.sin(theta)
+    f: float = r * math.cos(theta) + b
+    tan_theta: float = _tan(theta)
     return (
         {'X': {'x': c, 'y': d},
          'theta': theta,
@@ -416,5 +477,5 @@ def _tan(theta: float) -> float:
 
 
 def _isclose(a: float, b: float) -> bool:
-    diff = a - b
+    diff: float = a - b
     return diff < 0.0000001 and diff > -0.0000001
