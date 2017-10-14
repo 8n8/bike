@@ -1,10 +1,12 @@
-from mypy_extensions import TypedDict
 import math
+from mypy_extensions import TypedDict
 import numpy as np  # type: ignore
 from typing import (List, Tuple)
 import world2sensor as w
+from PIL import Image
 
-XY_RANGE = np.arange(1000)  # type: ignore
+
+XY_RANGE = np.arange(-100, 100, 0.2)  # type: ignore
 X_MATRIX, Y_MATRIX = np.meshgrid(XY_RANGE, XY_RANGE)  # type: ignore
 
 
@@ -32,13 +34,13 @@ class Line(TypedDict):
     tan_theta: float
 
 
-@profile
 def main(
         obstacles: List[w.Obstacle],
         freenesses: List[Freeness]
         ) -> float:
     obstacle_path_array = (
         _put_obstacles_in_array(obstacles))
+    # display_image(obstacle_path_array)
     freeness_array = (
         _put_freenesses_in_array(freenesses))
     error_array = np.absolute(  # type: ignore
@@ -46,8 +48,16 @@ def main(
     return np.sum(error_array)  # type: ignore
 
 
+def display_image(arr):
+    print(np.max(arr))
+    greyim = (arr*255.0 / 1000.0).astype(np.uint8)
+    print(np.max(greyim))
+    img = Image.fromarray(greyim)
+    img.show()
+
+
 def _put_freenesses_in_array(fs: List[Freeness]):
-    array = np.ones((1000, 1000)) * 1000_000.0
+    array = np.ones((1000, 1000)) * 1000.0
     for f in fs:
         array = np.minimum(  # type: ignore
             _put_freeness_in_array(f), array)
@@ -58,16 +68,9 @@ def _put_freeness_in_array(f: Freeness):
     return (_mark_circle({'o': f['position'], 'r': f['radius']}) *
             f['free_time'])
 
-    # def point_in_freeness(p: w.Point) -> bool:
-    #     return _point_in_circle(
-    #         p,
-    #         {'o': f['position'], 'r': f['radius']})
-
-    # return _np_map_2d(point_in_freeness)
-
 
 def _put_obstacles_in_array(os: List[w.Obstacle]):
-    array = np.ones((1000, 1000)) * 1000_000.0
+    array = np.ones((1000, 1000)) * 1000.0
     for o in os:
         array = np.minimum(  # type: ignore
             array,
@@ -79,33 +82,11 @@ def _put_obstacle_in_array(o: w.Obstacle):
     # Note that the 1000,000 is not special.  It was chosen because
     # it is a high number, because of the assumption that unless an
     # area is marked as soon-to-be-occupied it is free for a long time.
-    array = np.ones((1000, 1000)) * 1000_000.0
-    # It has 1s in the areas the obstacle travels over and 0s elsewhere.
-
-    def point_in_path(p: w.Point) -> bool:
-        return _point_in_path(p, o)
-    # It has 1s where the obstacle currently is and 0s elsewhere.
-
-    def _point_in_obstacle(p: w.Point) -> bool:
-        return _point_in_circle(
-            p,
-            {'o': o['position'], 'r': o['radius']})
-
+    array = np.ones((1000, 1000)) * 1000.0
     current_position = _mark_circle({'o': o['position'], 'r': o['radius']})
-    # _np_map_2d_bool(
-    #    _point_in_obstacle)
-
     path = _mark_obstacle_path(o)
-    path = path * ~current_position
-    # _np_map_2d_bool(point_in_path)
-
-    def _calculate_time_free_array(p: w.Point) -> float:
-        return _calculate_time_free_array_element(o, p)
-
     time_free = _make_time_free_array(o)
-    # _np_map_2d(_calculate_time_free_array)
-    result = path * time_free + array * ~current_position * ~path
-    return result
+    return path * time_free + array * ~current_position * ~path
 
 
 def _mark_circle(c: Circle):
@@ -114,21 +95,21 @@ def _mark_circle(c: Circle):
     return distance_from_circle < c['r']**2
 
 
-def _distance_from_line(L):
+def _squared_distance_from_line(L):
     if _isclose(L['theta'] % math.pi, math.pi/2):
         # The line is vertical.
         return np.abs(X_MATRIX - L['X']['x'])
     if _isclose(L['theta'] % math.pi, 0):
         # The line is horizontal.
         return np.abs(Y_MATRIX - L['X']['y'])
-
+    #
     #        ^
     #        |
     #        |
     #        |      (a,b)                        *
-    #        |       X                        *
-    #        |        *                    * y = mx + c
-    #        |      *                   *
+    #        |      X                         *
+    #        |       *                     * y = mx + c
+    #        |     *                    *
     #        |          * d          *
     #        |                    *
     #        |  h *        *   *
@@ -178,57 +159,29 @@ def _in_front_of_start(o: w.Obstacle):
 def _mark_obstacle_path(o: w.Obstacle):
     L1, L2 = _obstacle_path_lines(o)
     d: float = _perpendicular_distance_between_paralell_lines(L1, L2)
-    d1_from_line = _distance_from_line(L1)
-    d2_from_line = _distance_from_line(L2)
-    return (d1_from_line < d) * (d2_from_line < d) * _in_front_of_start(o)
+    d2 = d*d
+    d1_from_line = _squared_distance_from_line(L1)
+    d2_from_line = _squared_distance_from_line(L2)
+    return ((d1_from_line < d2) * (d2_from_line < d2) *
+            _in_front_of_start(o))
 
 
 def _velocity_magnitude(v: w.Velocity) -> float:
-    return v['x']**2 + v['y']**2
+    return (v['x']**2 + v['y']**2) **0.5
 
 
 def _make_time_free_array(o: w.Obstacle):
     distance_from_centre = ((X_MATRIX - o['position']['x'])**2 +
                             (Y_MATRIX - o['position']['y'])**2)**0.5
-    #close2centre = np.isclose(distance_from_centre, np.zeros((1000, 1000)))  # type: ignore
     velocity_mag = _velocity_magnitude(o['velocity'])
-    # return ~close2centre * velocity_mag / (close2centre + distance_from_centre)
-    with np.errstate(divide='ignore'):
-        return np.nan_to_num(velocity_mag / distance_from_centre)
-
-
-def _calculate_time_free_array_element(o: w.Obstacle, p: w.Point) -> float:
-    distance_from_centre: float = _distance_between(o['position'], p)
-    # speed = distance / time, so time = speed / distance
-    if _isclose(distance_from_centre, 0):
-        return 0.0
-    return _velocity_magnitude(o['velocity']) / distance_from_centre
-
-
-def _np_map_2d(function_of_position):
-    new = np.zeros((1000, 1000))
-    for x in range(1000):
-        for y in range(1000):
-            new[x][y] = function_of_position({'x': x, 'y': y})
-    return new
-
-
-def _np_map_2d_bool(function_of_position):
-    new = np.zeros((1000, 1000), dtype=np.bool)  # type: ignore
-    for x in range(1000):
-        for y in range(1000):
-            new[x][y] = function_of_position({'x': x, 'y': y})
-    return new
-
-
-def _point_in_circle(p: w.Point, c: Circle) -> bool:
-    """ It decides if the point is inside the circle. """
-    return _distance_between(p, c['o']) < c['r']
+    with np.errstate(divide='ignore'):  # type: ignore
+        return np.nan_to_num(velocity_mag  # type: ignore
+                             / distance_from_centre)
 
 
 def _straight_lines_identical(L1: Line, L2: Line) -> bool:
     """ It works out if the straight lines are the same. """
-    if not _isclose(L1['theta'], L2['theta']):
+    if _isclose(L1['theta'], L2['theta']):
         # The lines are not parallel so are not identical.
         return False
     err1, L1mc = _mx_plus_c(L1)
@@ -243,11 +196,7 @@ def _perpendicular_distance_between_paralell_lines(
         L2: Line
         ) -> float:
     """
-                             /
-                            /
-                           /                           /
-                          /                           /
-                         /                           /
+                         /
                         /                           /
                        /                           /
                       /                           /
@@ -304,8 +253,11 @@ def _perpendicular_distance_between_paralell_lines(
     y1: float = L1['X']['y']
     x2: float = L2['X']['x']
     y2: float = L2['X']['y']
-    assert _isclose(L1['theta'], L2['theta'])
     theta: float = L1['theta']
+    if _isclose(abs(theta % math.pi), 0):
+        return abs(y2 - y1)
+    if _isclose(abs(theta % math.pi), math.pi/2):
+        return abs(x2 - x1)
     if _straight_lines_identical(L1, L2):
         return 0
     u: float = y2 - y1
@@ -356,342 +308,17 @@ def _mx_plus_c(L: Line) -> Tuple[str, MxPlusC]:
     # tan(ϴ) = (y - c) / x
     #  y - c = x tan(ϴ)
     #      c = y - x tan(ϴ)
-    return (
-        None,
-        {'m': L['tan_theta'],
-         'c': L['X']['y'] - L['X']['x'] * L['tan_theta']})
-
-
-def _solve_MxPlusC(a: MxPlusC, b: MxPlusC) -> w.Point:
-    """
-    It finds the intersection of two non-vertical and non-parallel
-    straight lines defined by equations of the form y = mx + c.
-
-    Putting y = m1 * x + c1 and y = m2 * x + c2 into wxmaxima gives:
-        x = -(c1 - c2) / (m1 - m2)
-    and
-        y = (c2 * m1 - c1 * m2) / (m1 - m2).
-    """
-    return {
-        'x': -(a['c'] - b['c']) / (a['m'] - b['c']),
-        'y': (b['c'] * a['m'] - a['c'] * b['m']) / (a['m'] - b['m'])}
-
-
-def _intersection_of(L1: Line, L2: Line) -> Tuple[str, w.Point]:
-    """ It finds the point at the intersection of two straight lines. """
-    err1, L1mc = _mx_plus_c(L1)
-    err2, L2mc = _mx_plus_c(L2)
-    if err1 is not None and err2 is not None:
-        return "Both lines are vertical so no intersection.", None
-    if err1 is not None and err2 is None:
+    if L['tan_theta'] is not None:
         return (
             None,
-            {'x': L1['X']['x'],
-             'y': L2mc['m'] * L1['X']['x'] + L2mc['c']})
-    if err1 is None and err2 is not None:
-        return (
-            None,
-            {'x': L2['X']['x'],
-             'y': L1mc['m'] * L1['X']['x'] + L1mc['c']})
-    if _isclose(L1mc['m'], L2mc['m']):
-        return "Lines are parallel so do not intersect.", None
-    # if err1 is None and err2 is None:
-    return None, _solve_MxPlusC(L1mc, L2mc)
-
-
-def _perpendicular_distance_of_point_from_line(
-        L: Line,
-        p: w.Point
-        ) -> Tuple[str, float]:
-    err, X = _intersection_of(
-        {'X': p,
-         'theta': L['theta'] + math.pi/2,
-         'tan_theta': _tan(L['theta'])},
-        L)
-    if err is not None:
-        return err, None
-    return None, _distance_between(X, p)
-
-
-def _point_between_parallel_lines(
-        L1: Line,
-        L2: Line,
-        p: w.Point
-        ) -> Tuple[str, bool]:
-    """ It decides if the point is between the two parallel lines. """
-    d: float = _perpendicular_distance_between_paralell_lines(L1, L2)
-    err1, p1 = _perpendicular_distance_of_point_from_line(L1, p)
-    if err1 is not None:
-        return err1, None
-    err2, p2 = _perpendicular_distance_of_point_from_line(L2, p)
-    if err2 is not None:
-        return err2, None
-    return None, p1 < d and p2 < d
-
-
-def _point_in_front_of_start(o: w.Obstacle, p: w.Point) -> bool:
-    px: float = p['x']
-    py: float = p['y']
-    opx: float = o['position']['x']
-    opy: float = o['position']['y']
-    ovx: float = o['velocity']['x']
-    ovy: float = o['velocity']['y']
-    relx: float = px - opx
-    rely: float = py - opy
-    return relx * ovx + rely * ovy > 0
-
-
-def _point_in_path(
-        p: w.Point,
-        o: w.Obstacle,
-        ) -> bool:
-    """
-    The function gives 'True' if (x, y) is in the area shaded by X's
-    and false else.
-
-                    :
-                    : perpendicular
-                    :
-                    :
-                   ___  _  _  _  _  _  _  _  _  _  path1
-                 /  :  \ XXXXXXXXXXXXXXXXXXXXXXXXX
-        ---> v  |   o   | XXXXXXXXXXXXXXXXXXXXXXXX
-                 \  :  / XXXXXXXXXXXXXXXXXXXXXXXXX
-          obstacle ---  -  -  -  -  -  -  -  -  -  path2
-                    :
-                    :
-                    :
-                    :
-
-    The lines marked 'path1' and 'path2' are the straight lines at the
-    edges of the area travelled over by the obstacle as it moves along.
-    The line marked 'perpendicular' is the line that is perpendicular
-    to the path of the obstacle, and passes through the centre of it
-    when it is at the start position.  The arrow marked 'v' denotes
-    the velocity of the obstacle.
-    """
-    path1, path2 = _obstacle_path_lines(o)
-    circle: Circle = {'o': o['position'], 'r': o['radius']}
-    if _point_in_circle(p, circle):
-        return False
-    if not _point_between_parallel_lines(path1, path2, p):
-        return False
-    return _point_in_front_of_start(o, p)
-
-
-# def _line_right_angle_to_path(o: w.Obstacle) -> Line:
-#     vx = o['velocity']['x']
-#     vy = o['velocity']['y']
-#     # It's x-component over y-component because I want the line that
-#     # is perpendicular to the velocity.
-#     m = vx / vy
-#     #
-#     #
-#     #          y ^
-#     #            |
-#     #    *       |                             /
-#     #         *  |                            /
-#     #          c | *           1             /       /
-#     #            |      * - - - - - +       /       /
-#     #            |           * ϴ    '-m    /       /
-#     #            |-+              * '      ___    /
-#     #            | |              ϴ    * /     \
-#     #          b |- - - - - - - - - - - ::  o  :: obstacle,
-#     #            |                       \  '  /*   centre at (a, b)
-#     #            |                    /    ---       *
-#     #            |                   /      /             *
-#     #            |                  /      /'                  *
-#     #            |                          '                       *
-#     #          0 +--------------------------------------------------->
-#     #            0                          a                        x
-#     #
-#     #    From the diagram:
-#     #        tan(ϴ) = m
-#     #    and
-#     #        tan(ϴ) = (c - b) / a
-#     #         c - b = a tan(ϴ)
-#     #             c = a tan(ϴ) + b
-#     #               = a m + b
-#     #
-#     a = o['position']['x']
-#     b = o['position']['y']
-#     return {
-#         'm': m,
-#         'c': a * m + b}
-
-
-# def _intersecting_obstacles_err(
-#         os: List[w.Obstacle],
-#         fs: List[Freeness]
-#         ) -> float:
-#     """
-#     It works out the error for all the obstacles that have paths that
-#     intersect freenesses.  This function loops over all the freenesses
-#     for each obstacle and works out the
-#     """
-
-
-# def _non_intersecting_freenesses_err(fs: List[Freeness]) -> float:
-#     """
-#     It calculates the error for all the freenesses that do not intersect
-#     the paths of obstacles.  This type of freenesses are always erroneous
-#     because the whole point of a freeness is that it marks places that
-#     will soon not be free.  The error is bigger when the area of the
-#     freeness is greater and bigger when the rating of the freeness is
-#     smaller.
-#     """
-#     return sum((math.pi * f['radius']**2 / f['free_time'] for f in fs))
-
-
-# def _non_intersecting_obstacles_err(os: List[w.Obstacles]) -> float:
-#     """
-#     It calculates the error for all the obstacles with paths that do not
-#     intersect freenesses.
-#
-#        time till occupied
-#         ^
-#         |
-#         |     default time till occupied
-#         |        (as high as possible)
-#       d | - - - - - - - - - - - - - - - - - - -
-#         |                              '
-#         |                              '
-#       k |   -    error area (a)   -    *
-#         |                          *   '
-#         |                      *       '
-#         |                  *           '
-#         |              * actual time   '
-#         |          * till occupied     '
-#         |      * curve                 '  distance from
-#         |  *                           '  start position
-#       0 +---------------------------------------------->
-#         0                              |
-#                                      100 m
-#                            (max distance considered)
-#
-#     From the diagram, it can be seen that
-#         a = 100d - (100k/2)
-#     where
-#         k = 100/v
-#         v = velocity of obstacle
-#     so
-#         a = 100d - (100 (100/v) / 2)
-#           = 100d - (5000 / v)
-#           = 100 ( d - (50 / v) )
-#     """
-#     d: float = 1000_000.0
-#     return sum((100 * (d - (50 / magnitude(o['velocity']))) for o in os))
-
-
-# def magnitude(v: w.Velocity) -> float:
-#     return (v['x']**2 + v['y']**2)**0.5
-
-
-# def _compare_intersecting(
-#         os: List[w.Obstacle],
-#         fs: List[Freeness]
-#         ) -> float:
-#     pass
+            {'m': L['tan_theta'],
+             'c': L['X']['y'] - L['X']['x'] * L['tan_theta']})
+    return "Line is vertical so no gradient", None
 
 
 def _distance_between(a: w.Point, b: w.Point) -> float:
     """ It calculates the distance between two points. """
     return ((a['x'] - b['x'])**2 + (a['y'] - b['y'])**2)**0.5
-
-
-# def _obstacle_currently_intersects_freeness(
-#         o: w.Obstacle,
-#         f: Freeness
-#         ) -> bool:
-#     """
-#     It works out if the obstacle in its current position intersects
-#     the freeness.
-#     """
-#     return (o['radius'] + f['radius'] >
-#             _distance_between(o['position'], f['position']))
-
-
-# def _obstacle_going_towards_freeness(o: w.Obstacle, f: Freeness) -> bool:
-#     """
-#     It works out if the obstacle is travelling towards the freeness.
-#     """
-#     relative_position = {
-#         'x': f['position']['x'] - o['position']['x'],
-#         'y': f['position']['y'] - o['position']['y']}
-#     dot_product_of_rel_pos_vel = (
-#         relative_position['x'] * o['velocity']['x'] +
-#         relative_position['y'] * o['velocity']['y'])
-#     return dot_product_of_rel_pos_vel > 0
-
-
-# class ComplexPoint(TypedDict):
-#     x: complex
-#     y: complex
-
-
-# def _intersections_of_line_and_circle(
-#         L: Line,
-#         C: Circle
-#         ) -> Tuple[ComplexPoint, ComplexPoint]:
-#     """
-#     The computer algebra program wxmaxima was used to find the
-#     intersections of a straight line and a circle, as follows:
-#     (%i1)   eq1: (x-h)^2 + (y-k)^2 = r^2;
-#     (eq1)   (y-k)^2+(x-h)^2=r^2
-#     (%i2)   eq2: y = m*x+c;
-#     (eq2)   y=m*x+c
-#     (%i3)   solve([eq1, eq2], [x, y]);
-#     (%o3)   [[x=(-sqrt((m^2+1)*r^2-h^2*m^2+k*(2*h*m+2*c)-2*c*h*m-k^2-c^2)
-#                  +k*m-c*m+h)
-#                 /(m^2+1),
-#               y=(-m*sqrt((m^2+1)*r^2-h^2*m^2+k*(2*h*m+2*c)-2*c*h*m-k^2-c^2)
-#                  +k*m^2+h*m+c)
-#                 /(m^2+1)],
-#              [x=(sqrt((m^2+1)*r^2-h^2*m^2+k*(2*h*m+2*c)-2*c*h*m-k^2-c^2)
-#                  +k*m-c*m+h)
-#                 /(m^2+1),
-#               y=(m*sqrt((m^2+1)*r^2-h^2*m^2+k*(2*h*m+2*c)-2*c*h*m-k^2-c^2)
-#                  +k*m^2+h*m+c)
-#                 /(m^2+1)]]
-#     """
-#     c: float = L['c']
-#     m: float = L['m']
-#     h: float = C['h']
-#     k: float = C['k']
-#     r: float = C['r']
-#     c2: float = c*c
-#     m2: float = m*m
-#     h2: float = h*h
-#     k2: float = k*k
-#     r2: float = r*r
-#     big_square_root: complex = ((m2 + 1)*r2 - h2*m2 + k*(2*h*m + 2*c) -
-#                                 2*c*h*m - k2 - c2)**0.5
-#     denominator: float = m2 + 1
-#     kxm_cxmPh: float = k * m - c * m + h
-#     kxm2PhxmPc: float = k * m2 + h * m + c
-#     x1: complex = (- big_square_root + kxm_cxmPh) / denominator
-#     y1: complex = (- m * big_square_root + kxm2PhxmPc) / denominator
-#     x2: complex = (big_square_root + kxm_cxmPh) / denominator
-#     y2: complex = (m * big_square_root + kxm2PhxmPc) / denominator
-#     return (
-#         {'x': x1, 'y': y1},
-#         {'x': x2, 'y': y2})
-
-
-# def _line_intersects_circle(L: Line, C: Circle) -> bool:
-#     X1, X2 = _intersections_of_line_and_circle(L, C)
-#     # Case where there are no intersections.  From the formula, if one
-#     # of the four coordinates of the two coordinates is imaginary then
-#     # they all are, so there are no intersections.
-#     if math.isclose(X1['x'].imag, 0):
-#         return False
-#     # Case where the line just touches the circle at a tangent.  This is
-#     # a false because I am only interested when the areas actually
-#     # overlap.
-#     if (math.isclose(X1['x'].real, X2['x'].real) and
-#             math.isclose(X1['y'].real, X2['y'].real)):
-#         return False
-#     return True
 
 
 def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
@@ -728,7 +355,6 @@ def _obstacle_path_lines(o: w.Obstacle) -> Tuple[Line, Line]:
 
     Want to know:
         c, d, ϴ
-
 
     The line of length r between (a, b) and (c, d) is perpendicular to
     lines B and D, and to the velocity of the object.  The velocity of

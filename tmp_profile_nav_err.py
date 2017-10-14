@@ -8,9 +8,9 @@ def main():
             'x': 0,
             'y': 0},
         'velocity': {
-            'x': 5,
+            'x': 0,
             'y': 0},
-        'radius': 0.5}
+        'radius': 5}
     # smallfreeness: v.Freeness = {
     #     'radius': 0.1,
     #     'position': {
@@ -27,4 +27,3 @@ def main():
 
 
 main()
-# cProfile.run('main()')
