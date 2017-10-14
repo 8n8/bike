@@ -167,7 +167,7 @@ def _mark_obstacle_path(o: w.Obstacle):
 
 
 def _velocity_magnitude(v: w.Velocity) -> float:
-    return (v['x']**2 + v['y']**2) **0.5
+    return (v['x']**2 + v['y']**2)**0.5
 
 
 def _make_time_free_array(o: w.Obstacle):
