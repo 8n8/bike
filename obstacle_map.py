@@ -37,4 +37,4 @@ def first_net():
             data_format='channels_last'),
         k.layers.core.Flatten()])
 
-# Note that this config takes about 0.07s per run.  *t has 82,430 parameters.
+# Note that this config takes about 0.07s per run.  It has 82,430 parameters.
