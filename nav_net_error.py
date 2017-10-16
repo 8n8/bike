@@ -126,65 +126,115 @@ def _mark_circle(c: Circle) -> 'np.ndarray[np.bool]':  # type: ignore
 
 
 @profile
-def _squared_distance_from_line(L) -> 'np.ndarray[np.float64]':
-    """
-    It makes an array each element of which is the squared distance
-    of that element from the given straight line.
-    """
+def _squared_distance_from_line(L: Line) -> 'np.ndarray[np.float64]':
     if _isclose(L['theta'] % math.pi, math.pi/2):
         # The line is vertical.
         return np.abs(X_MATRIX - L['X']['x'])  # type: ignore
     if _isclose(L['theta'] % math.pi, 0):
         # The line is horizontal.
         return np.abs(Y_MATRIX - L['X']['y'])  # type: ignore
+    # The equation for the distance of a point from a straight line is
+    # given on Wikipedia as
     #
-    #        ^
-    #        |
-    #        |
-    #        |      (a,b)                        *
-    #        |      X                         *
-    #        |       *                     * y = mx + c
-    #        |     *                    *
-    #        |          * d          *
-    #        |                    *
-    #        |  h *        *   *
-    #        |              *
-    #        |           *
-    #        |  * α   *
-    #        |     *
-    #        |  *  ϴ = arctan(m)
-    #      c X - - - - - - -
-    #        |
-    #        |
-    #        +----------------------------------------->
+    #     | a x_0 + b y_0 + d |
+    #     ---------------------
+    #        (a² + b²) ^ 0.5
     #
+    # where the line is defined by
     #
-    #    Knowns:
-    #        ϴ, m, c, a, b
+    #     a x + b y + d = 0
     #
-    #    Wanted:
-    #        d
+    # and the point is at (x_0, y_0).  Rearranging the equation of the
+    # line:
     #
-    #    From the diagram it can be seen that
+    #     a x + b y + d = 0
+    #               b y = - a x + d
+    #                 y = - (a/b) x + (d/b)
     #
-    #        sin α = d / h
-    #            d = h sin α
+    # So if the line is defined as y = mx + c then
     #
-    #        h = (a² + (b - c)²) ^ 0.5
+    #     m = - a / b
     #
-    #        sin(α + ϴ) = (b - c) / h
-    #             α + ϴ = arcsin((b - c) / h)
-    #                 α = arcsin((b - c) / h) - ϴ
-
-    # Don't care about the error, since the case of the line being
-    # vertical has been dealt with already.
+    # and
+    #
+    #     c = d / b
+    #
+    # Choosing b=1, then
+    #
+    #     c = d
+    #     d = c
+    #
+    # and
+    #
+    #     m = - a
+    #     a = - m
     _, mxPc = _mx_plus_c(L)
-    b_c: 'np.ndarray[np.float64]' = Y_MATRIX - mxPc['c']
-    h: 'np.ndarray[np.float64]' = (X_MATRIX**2 + b_c**2)**0.5
-    alpha: 'np.ndarray[np.float64]' = (
-        np.arcsin(b_c / h) - math.atan(mxPc['m']))  # type: ignore
-    d: 'np.ndarray[np.float64]' = h * np.sin(alpha)  # type: ignore
-    return d
+    a = - mxPc['m']
+    b = 1
+    d = mxPc['c']
+    sqrt_a2_plus_b2 = (a**2 + b**2) ** 0.5
+    return abs(a * X_MATRIX + Y_MATRIX + d) / sqrt_a2_plus_b2
+
+
+# def _squared_distance_from_line(L) -> 'np.ndarray[np.float64]':
+#     """
+#     It makes an array each element of which is the squared distance
+#     of that element from the given straight line.
+#     """
+#     if _isclose(L['theta'] % math.pi, math.pi/2):
+#         # The line is vertical.
+#         return np.abs(X_MATRIX - L['X']['x'])  # type: ignore
+#     if _isclose(L['theta'] % math.pi, 0):
+#         # The line is horizontal.
+#         return np.abs(Y_MATRIX - L['X']['y'])  # type: ignore
+#     #
+#     #        ^
+#     #        |
+#     #        |
+#     #        |      (a,b)                        *
+#     #        |      X                         *
+#     #        |       *                     * y = mx + c
+#     #        |     *                    *
+#     #        |          * d          *
+#     #        |                    *
+#     #        |  h *        *   *
+#     #        |              *
+#     #        |           *
+#     #        |  * α   *
+#     #        |     *
+#     #        |  *  ϴ = arctan(m)
+#     #      c X - - - - - - -
+#     #        |
+#     #        |
+#     #        +----------------------------------------->
+#     #
+#     #
+#     #    Knowns:
+#     #        ϴ, m, c, a, b
+#     #
+#     #    Wanted:
+#     #        d
+#     #
+#     #    From the diagram it can be seen that
+#     #
+#     #        sin α = d / h
+#     #            d = h sin α
+#     #
+#     #        h = (a² + (b - c)²) ^ 0.5
+#     #
+#     #        sin(α + ϴ) = (b - c) / h
+#     #             α + ϴ = arcsin((b - c) / h)
+#     #                 α = arcsin((b - c) / h) - ϴ
+#
+#     # Don't care about the error, since the case of the line being
+#     # vertical has been dealt with already.
+#     _, mxPc = _mx_plus_c(L)
+#     b_c: 'np.ndarray[np.float64]' = Y_MATRIX - mxPc['c']
+#     h: 'np.ndarray[np.float64]' = (X_MATRIX**2 + b_c**2)**0.5
+#     alpha: 'np.ndarray[np.float64]' = (
+#         np.arcsin(b_c / h) - math.atan(mxPc['m']))  # type: ignore
+#     d: 'np.ndarray[np.float64]' = h * np.sin(alpha)  # type: ignore
+#     return d
 
 
 def _in_front_of_start(
