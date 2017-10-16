@@ -236,18 +236,19 @@ def _squared_distance_from_line(L: Line) -> 'np.ndarray[np.float64]':
 #     return d
 
 
-@profile
 def _in_front_of_start(
         o: w.Obstacle) -> 'np.ndarray[np.bool]':  # type: ignore
     """
     It marks the area on the array that is in front of the centre of the
     obstacle in its start position.
     """
-    relx: 'np.ndarray[np.float64]' = X_MATRIX - o['position']['x']
-    rely: 'np.ndarray[np.float64]' = Y_MATRIX - o['position']['y']
     ovx: float = o['velocity']['x']
     ovy: float = o['velocity']['y']
-    return relx * ovx + rely * ovy > 0  # type: ignore
+    # relx: 'np.ndarray[np.float64]' = X_MATRIX - o['position']['x']
+    # rely: 'np.ndarray[np.float64]' = Y_MATRIX - o['position']['y']
+    # return relx * ovx + rely * ovy > 0  # type: ignore
+    return ((X_MATRIX - o['position']['x']) * ovx +
+            (Y_MATRIX - o['position']['y']) * ovy) > 0
 
 
 def _mark_obstacle_path(
