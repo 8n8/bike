@@ -175,67 +175,6 @@ def _squared_distance_from_line(L: Line) -> 'np.ndarray[np.float64]':
     return abs(a * X_MATRIX + Y_MATRIX + d) / sqrt_a2_plus_b2
 
 
-# def _squared_distance_from_line(L) -> 'np.ndarray[np.float64]':
-#     """
-#     It makes an array each element of which is the squared distance
-#     of that element from the given straight line.
-#     """
-#     if _isclose(L['theta'] % math.pi, math.pi/2):
-#         # The line is vertical.
-#         return np.abs(X_MATRIX - L['X']['x'])  # type: ignore
-#     if _isclose(L['theta'] % math.pi, 0):
-#         # The line is horizontal.
-#         return np.abs(Y_MATRIX - L['X']['y'])  # type: ignore
-#     #
-#     #        ^
-#     #        |
-#     #        |
-#     #        |      (a,b)                        *
-#     #        |      X                         *
-#     #        |       *                     * y = mx + c
-#     #        |     *                    *
-#     #        |          * d          *
-#     #        |                    *
-#     #        |  h *        *   *
-#     #        |              *
-#     #        |           *
-#     #        |  * α   *
-#     #        |     *
-#     #        |  *  ϴ = arctan(m)
-#     #      c X - - - - - - -
-#     #        |
-#     #        |
-#     #        +----------------------------------------->
-#     #
-#     #
-#     #    Knowns:
-#     #        ϴ, m, c, a, b
-#     #
-#     #    Wanted:
-#     #        d
-#     #
-#     #    From the diagram it can be seen that
-#     #
-#     #        sin α = d / h
-#     #            d = h sin α
-#     #
-#     #        h = (a² + (b - c)²) ^ 0.5
-#     #
-#     #        sin(α + ϴ) = (b - c) / h
-#     #             α + ϴ = arcsin((b - c) / h)
-#     #                 α = arcsin((b - c) / h) - ϴ
-#
-#     # Don't care about the error, since the case of the line being
-#     # vertical has been dealt with already.
-#     _, mxPc = _mx_plus_c(L)
-#     b_c: 'np.ndarray[np.float64]' = Y_MATRIX - mxPc['c']
-#     h: 'np.ndarray[np.float64]' = (X_MATRIX**2 + b_c**2)**0.5
-#     alpha: 'np.ndarray[np.float64]' = (
-#         np.arcsin(b_c / h) - math.atan(mxPc['m']))  # type: ignore
-#     d: 'np.ndarray[np.float64]' = h * np.sin(alpha)  # type: ignore
-#     return d
-
-
 def _in_front_of_start(
         o: w.Obstacle) -> 'np.ndarray[np.bool]':  # type: ignore
     """
@@ -244,9 +183,6 @@ def _in_front_of_start(
     """
     ovx: float = o['velocity']['x']
     ovy: float = o['velocity']['y']
-    # relx: 'np.ndarray[np.float64]' = X_MATRIX - o['position']['x']
-    # rely: 'np.ndarray[np.float64]' = Y_MATRIX - o['position']['y']
-    # return relx * ovx + rely * ovy > 0  # type: ignore
     return ((X_MATRIX - o['position']['x']) * ovx +
             (Y_MATRIX - o['position']['y']) * ovy) > 0
 
@@ -269,8 +205,8 @@ def _mark_obstacle_path(
             _in_front_of_start(o))
 
 
-def _velocity_magnitude_squared(v: w.Velocity) -> float:
-    return (v['x']**2 + v['y']**2)
+def _velocity_magnitude(v: w.Velocity) -> float:
+    return (v['x']**2 + v['y']**2)**0.5
 
 
 def _make_time_free_array(o: w.Obstacle) -> 'np.ndarray[np.float64]':
@@ -279,13 +215,13 @@ def _make_time_free_array(o: w.Obstacle) -> 'np.ndarray[np.float64]':
     cell has a number in it that is the amount of time that the obstacle
     would take to get there if it was travelling in that direction.
     """
-    distance_from_centre_squared: 'np.ndarray[np.float64]' = (
+    distance_from_centre: 'np.ndarray[np.float64]' = (
         (X_MATRIX - o['position']['x'])**2 +
-        (Y_MATRIX - o['position']['y'])**2)
-    velocity_mag_sq: float = _velocity_magnitude_squared(o['velocity'])
+        (Y_MATRIX - o['position']['y'])**2)**0.5
+    velocity_mag: float = _velocity_magnitude(o['velocity'])
     with np.errstate(divide='ignore'):  # type: ignore
-        return np.nan_to_num(velocity_mag_sq   # type: ignore
-                             / distance_from_centre_squared)
+        return np.nan_to_num(velocity_mag  # type: ignore
+                             / distance_from_centre)
 
 
 def _straight_lines_identical(L1: Line, L2: Line) -> bool:
