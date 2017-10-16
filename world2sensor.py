@@ -260,6 +260,10 @@ def _obstacle_image_parameters(
     if X['B'] > 0:
         x = min(z, X['B'])
     y: float = 0
+    if X['D'] - X['B'] < 0:
+        return {
+            'x': 0,
+            'y': 0}
     if X['D'] - X['C'] < 0:
         y = min(z, X['D'] - X['B'])
     else:
