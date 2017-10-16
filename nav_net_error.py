@@ -125,6 +125,7 @@ def _mark_circle(c: Circle) -> 'np.ndarray[np.bool]':  # type: ignore
     return distance_from_circle < c['r']**2  # type: ignore
 
 
+@profile
 def _squared_distance_from_line(L) -> 'np.ndarray[np.float64]':
     """
     It makes an array each element of which is the squared distance
