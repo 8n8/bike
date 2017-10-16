@@ -1,5 +1,7 @@
-# It exposes one function that is used for calculating the error of the
-# output of the navigation neural net.
+"""
+It exposes one function that is used for calculating the error of the
+output of the navigation neural net.
+"""
 
 
 import math
@@ -125,8 +127,8 @@ def _mark_circle(c: Circle) -> 'np.ndarray[np.bool]':  # type: ignore
 
 def _squared_distance_from_line(L) -> 'np.ndarray[np.float64]':
     """
-    It makes an array each element of which is the distance of that
-    element from the given straight line.
+    It makes an array each element of which is the squared distance
+    of that element from the given straight line.
     """
     if _isclose(L['theta'] % math.pi, math.pi/2):
         # The line is vertical.
