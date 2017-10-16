@@ -125,7 +125,6 @@ def _mark_circle(c: Circle) -> 'np.ndarray[np.bool]':  # type: ignore
     return distance_from_circle < c['r']**2  # type: ignore
 
 
-@profile
 def _squared_distance_from_line(L: Line) -> 'np.ndarray[np.float64]':
     if _isclose(L['theta'] % math.pi, math.pi/2):
         # The line is vertical.
@@ -237,6 +236,7 @@ def _squared_distance_from_line(L: Line) -> 'np.ndarray[np.float64]':
 #     return d
 
 
+@profile
 def _in_front_of_start(
         o: w.Obstacle) -> 'np.ndarray[np.bool]':  # type: ignore
     """
