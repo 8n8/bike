@@ -11,7 +11,7 @@ from typing import (List, Tuple)
 import world2sensor as w
 
 
-XY_RANGE = np.arange(-100, 100, 0.2)  # type: ignore
+XY_RANGE = np.arange(-100, 100, 0.2, dtype=np.float32)  # type: ignore
 X_MATRIX, Y_MATRIX = np.meshgrid(XY_RANGE, XY_RANGE)  # type: ignore
 
 
@@ -80,7 +80,7 @@ def _put_freenesses_in_array(
     with the lower time rating is used in the overlapping area.
     """
     array: 'np.ndarray[np.float64]' = (  # type: ignore
-        np.ones((1000, 1000)) * 1000.0)
+        np.ones((1000, 1000), dtype=np.float32) * 1000.0)
     for f in fs:
         array = np.minimum(  # type: ignore
             _put_freeness_in_array(f), array)
@@ -96,7 +96,7 @@ def _put_obstacles_in_array(
         os: List[w.Obstacle]
         ) -> 'np.ndarray[np.float64]':
     array: 'np.ndarray[np.float64]' = (  # type: ignore
-        np.ones((1000, 1000)) * 1000.0)
+        np.ones((1000, 1000), dtype=np.float32) * 1000.0)
     for o in os:
         array = np.minimum(  # type: ignore
             array,
@@ -109,7 +109,7 @@ def _put_obstacle_in_array(o: w.Obstacle) -> 'np.ndarray[np.float64]':
     # it is a high number, because of the assumption that unless an
     # area is marked as soon-to-be-occupied it is free for a long time.
     array: 'np.ndarray[np.float64]' = (  # type: ignore
-        np.ones((1000, 1000)) * 1000.0)
+        np.ones((1000, 1000), dtype=np.float32) * 1000.0)
     current_position: 'np.ndarray[np.bool]' = (  # type: ignore
         _mark_circle({'o': o['position'], 'r': o['radius']}))
     path: 'np.ndarray[np.bool]' = _mark_obstacle_path(o)  # type: ignore
