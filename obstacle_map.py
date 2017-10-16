@@ -20,46 +20,45 @@ class ImagesOverTime(TypedDict):
 
 def first_net():
     return k.models.Sequential([
-        k.layers.convolutional.Conv2D(
+        k.layers.convolutional.Conv3D(
             5,  # number of output layers
             3,  # kernel size
-            strides=(1, 1),
+            strides=(1, 1, 1),
             padding='same',
             activation='relu',
-            input_shape=(200, 200, 3),
+            input_shape=(200, 200, 5, 3),
             data_format='channels_last'),
-        k.layers.convolutional.Conv2D(
+        k.layers.convolutional.Conv3D(
             10,
             3,
-            strides=(2, 2),
+            strides=(2, 2, 2),
             padding='same',
             activation='relu'),
-        k.layers.convolutional.Conv2D(
+        k.layers.convolutional.Conv3D(
             15,
             3,
-            strides=(2, 2),
+            strides=(2, 2, 2),
             padding='same',
             activation='relu'),
-        k.layers.convolutional.Conv2D(
+        k.layers.convolutional.Conv3D(
             20,
             3,
-            strides=(2, 2),
+            strides=(2, 2, 2),
             padding='same',
             activation='relu'),
-        k.layers.convolutional.Conv2D(
+        k.layers.convolutional.Conv3D(
             30,
             3,
-            strides=(2, 2),
+            strides=(2, 2, 2),
             padding='same',
             activation='relu'),
-        k.layers.convolutional.Conv2D(
+        k.layers.convolutional.Conv3D(
             60,
             3,
-            strides=(2, 2),
+            strides=(2, 2, 2),
             padding='same',
             activation='relu'),
-        k.layers.normalization.BatchNormalization(),
-        k.layers.core.Flatten()])
+        k.layers.normalization.BatchNormalization()])
 
 
 def second_net():
