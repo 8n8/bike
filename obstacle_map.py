@@ -1,3 +1,4 @@
+import generate_nav_data as g
 import keras as k  # type: ignore
 from mypy_extensions import TypedDict
 import numpy as np  # noqa: F401
@@ -37,4 +38,26 @@ def first_net():
             data_format='channels_last'),
         k.layers.core.Flatten()])
 
+
 # Note that this config takes about 0.07s per run.  It has 82,430 parameters.
+
+
+def getdat():
+    d = g.main()
+    return d['nn_input'], d['nn_output']
+
+
+def main():
+    nn = first_net()
+    nn.compile(
+        optimizer='adam',
+        loss='mean_squared_error',
+        metrics=['accuracy'])
+    for i in range(10_000):
+        print("Training cycle {}.".format(i))
+        nn.save('navnet.hdf5')
+        train_in, train_out = getdat()
+        nn.fit(train_in, train_out, epochs=1, batch_size=5)
+
+
+main()

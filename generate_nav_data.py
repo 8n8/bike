@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor as Executor
 from mypy_extensions import TypedDict
 from nav_net_error import _put_obstacles_in_array
 import numpy as np
@@ -13,12 +14,21 @@ class NNData(TypedDict):
 
 
 def main() -> NNData:
-    dat = [single_data_point() for _ in range(20)]
+    with Executor() as executor:
+        p1 = executor.submit(gen_many)
+        p2 = executor.submit(gen_many)
+        p3 = executor.submit(gen_many)
+        p4 = executor.submit(gen_many)
+    dat = p1.result() + p2.result() + p3.result() + p4.result()
     ins = (i['nn_input'] for i in dat)
     outs = (i['nn_output'].flatten() for i in dat)
     return {
         'nn_input': np.stack(ins, axis=0),  # type: ignore
         'nn_output': np.stack(outs, axis=0)}  # type: ignore
+
+
+def gen_many():
+    return [single_data_point() for _ in range(20)]
 
 
 def _image_dict2np(i: w.ImageSet) -> 'np.ndarray[np.uint8]':
