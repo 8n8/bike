@@ -345,6 +345,9 @@ def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
     positions it on the x-axis.  Then the y-coordinates of A, B, C and
     D can be ignored and the x-coordinates are used as the number line.
     """
+    if m.isclose(D['x'], A['x']):
+        # The line is vertical.
+        return X['y'] - A['y']
     gradient: float = (D['y'] - A['y']) / (D['x'] - A['x'])
     angle: float = m.atan(gradient)
     rotation: 'np.ndarray[float]' = np.array([

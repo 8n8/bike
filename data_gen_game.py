@@ -1,7 +1,7 @@
 import math
 from mypy_extensions import TypedDict
 from PIL import ImageTk, Image  # type: ignore
-from pynput import keyboard  # type: ignore
+# from pynput import keyboard  # type: ignore
 import tkinter as k
 from typing import List
 import update_obstacle_pop as u
@@ -63,7 +63,7 @@ class WorldState(TypedDict):
 
 def numpy_to_TKimage(i: w.ImageSet):
     def f(im):
-        return ImageTk.PhotoImage(Image.fromarray(im))
+        return ImageTk.PhotoImage(Image.fromarray(im).resize((200,200), Image.ANTIALIAS))
     return {
         'front': f(i['front']),
         'left': f(i['left']),
@@ -98,7 +98,7 @@ def distance_between(a: w.Point, b: w.Point) -> float:
 
 def crashed_into_obstacle(w: WorldState) -> bool:
     return any([
-        distance_between(w['position'], o['position']) < 1
+        distance_between(w['position'], o['position']) < 2
         for o in w['obstacles']])
 
 
@@ -122,39 +122,47 @@ class World:
         print(self.w['velocity'])
         self.w = update_world(self.w, 0.1)
         self.images = make_images(self.w)
-        self.canvas.create_image(250, 100, image=self.images['front'])
-        self.canvas.create_image(100, 250, image=self.images['right'])
-        self.canvas.create_image(250, 400, image=self.images['back'])
-        self.canvas.create_image(400, 250, image=self.images['left'])
+        self.canvas.create_image(320, 110, image=self.images['front'])
+        self.canvas.create_image(320, 330, image=self.images['back'])
+        self.canvas.create_image(110, 220, image=self.images['left'])
+        self.canvas.create_image(530, 220, image=self.images['right'])
         self.canvas.after(50, self.update)
 
-    def increase_velocity(self):
-        print('increased velocity')
+    def increase_velocity(self, _):
         self.w['velocity'] = update_velocity('up', self.w['velocity'])
 
-    def decrease_velocity(self):
+    def decrease_velocity(self, _):
         self.w['velocity'] = update_velocity('down', self.w['velocity'])
 
-    def velocity_left(self):
+    def velocity_left(self, _):
         self.w['velocity'] = update_velocity('left', self.w['velocity'])
 
-    def velocity_right(self):
+    def velocity_right(self, _):
         self.w['velocity'] = update_velocity('right', self.w['velocity'])
 
 
-root = k.Tk()
-root.title('NavNet data generator game')
-root.geometry('800x600')
-canvas = k.Canvas(root, width=500, height=500, bg='grey')
-canvas.pack()
+def circle(canvas, x, y, r, colour):
+    canvas.create_oval(x - r, y - r, x + 2 * r, y + 2 * r, fill=colour)
 
-world = World(canvas)
 
-root.bind("<Up>", world.increase_velocity())
-root.bind("<Down>", world.decrease_velocity())
-root.bind("<Left>", world.velocity_left())
-root.bind("<Right>", world.velocity_right())
+def main():
+    root = k.Tk()
+    root.title('NavNet data generator game')
+    root.geometry('800x600')
+    canvas = k.Canvas(root, width=650, height=1000, bg='grey')
+    canvas.pack()
+    circle(canvas, 200, 800, 60, 'black')
 
-world.update()
+    world = World(canvas)
 
-root.mainloop()
+    root.bind("<Up>", world.increase_velocity)
+    root.bind("<Down>", world.decrease_velocity)
+    root.bind("<Left>", world.velocity_left)
+    root.bind("<Right>", world.velocity_right)
+
+    world.update()
+
+    root.mainloop()
+
+
+main()
