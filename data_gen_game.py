@@ -116,6 +116,10 @@ class World:
         self.images = make_images(self.w)
 
     def update(self):
+        if crashed_into_obstacle(self.w):
+            print('Robot has crashed into obstacle.')
+            return
+        print(self.w['velocity'])
         self.w = update_world(self.w, 0.1)
         self.images = make_images(self.w)
         self.canvas.create_image(250, 100, image=self.images['front'])
@@ -125,34 +129,32 @@ class World:
         self.canvas.after(50, self.update)
 
     def increase_velocity(self):
-        self.w['velocity'] = update_velocity('up': self.w['velocity'])
+        print('increased velocity')
+        self.w['velocity'] = update_velocity('up', self.w['velocity'])
 
     def decrease_velocity(self):
-        self.w['velocity'] = update_velocity('down': self.w['velocity'])
+        self.w['velocity'] = update_velocity('down', self.w['velocity'])
 
     def velocity_left(self):
-        self.w['velocity'] = update_velocity('left': self.w['velocity'])
+        self.w['velocity'] = update_velocity('left', self.w['velocity'])
 
     def velocity_right(self):
-        self.w['velocity'] = update_velocity('right': self.w['velocity'])
+        self.w['velocity'] = update_velocity('right', self.w['velocity'])
 
 
-def main():
-    root = k.Tk()
-    root.title('NavNet data generator game')
-    root.geometry('800x600')
-    canvas = k.Canvas(root, width=500, height=500, bg='grey')
-    canvas.pack()
+root = k.Tk()
+root.title('NavNet data generator game')
+root.geometry('800x600')
+canvas = k.Canvas(root, width=500, height=500, bg='grey')
+canvas.pack()
 
-    world = World(canvas)
-    world.update()
+world = World(canvas)
 
-    root.bind("<Up>", world.increase_velocity())
-    root.bind("<Down>", world.decrease_velocity())
-    root.bind("<Left>", world.velocity_left())
-    root.bind("<Right>", world.velocity_right())
+root.bind("<Up>", world.increase_velocity())
+root.bind("<Down>", world.decrease_velocity())
+root.bind("<Left>", world.velocity_left())
+root.bind("<Right>", world.velocity_right())
 
-    root.mainloop()
+world.update()
 
-
-main()
+root.mainloop()
