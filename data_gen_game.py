@@ -22,8 +22,8 @@ def angle_mod(angle: float) -> float:
 def speed_mod(speed: float) -> float:
     if speed > 10:
         return 10
-    if speed < 0:
-        return 0
+    if speed < -10:
+        return -10 
     return speed
 
 
@@ -40,11 +40,11 @@ def update_velocity(key: str, v: Velocity) -> Velocity:
             'speed': speed_mod(v['speed'] - speed_step)}
     if key == 'left':
         return {
-            'angle': angle_mod(v['angle'] + angle_step),
+            'angle': angle_mod(v['angle'] - angle_step),
             'speed': v['speed']}
     if key == 'right':
         return {
-            'angle': angle_mod(v['angle'] - angle_step),
+            'angle': angle_mod(v['angle'] + angle_step),
             'speed': v['speed']}
     return v
 
@@ -63,7 +63,8 @@ class WorldState(TypedDict):
 
 def numpy_to_TKimage(i: w.ImageSet):
     def f(im):
-        return ImageTk.PhotoImage(Image.fromarray(im).resize((200,200), Image.ANTIALIAS))
+        return ImageTk.PhotoImage(
+            Image.fromarray(im).resize((200, 200), Image.ANTIALIAS))
     return {
         'front': f(i['front']),
         'left': f(i['left']),
@@ -116,11 +117,13 @@ class World:
         self.images = make_images(self.w)
 
     def update(self):
+        self.canvas.delete('all')
         if crashed_into_obstacle(self.w):
-            print('Robot has crashed into obstacle.')
+            # print('Robot has crashed into obstacle.')
             return
         print(self.w['velocity'])
-        self.w = update_world(self.w, 0.1)
+        plot_objects(self.canvas, self.w)
+        self.w = update_world(self.w, 0.05)
         self.images = make_images(self.w)
         self.canvas.create_image(320, 110, image=self.images['front'])
         self.canvas.create_image(320, 330, image=self.images['back'])
@@ -145,13 +148,35 @@ def circle(canvas, x, y, r, colour):
     canvas.create_oval(x - r, y - r, x + 2 * r, y + 2 * r, fill=colour)
 
 
+def plot_obstacle(canvas, o: w.Obstacle, xoffset, yoffset, scale):
+    circle(
+        canvas,
+        scale * o['position']['x'] + xoffset,
+        scale * o['position']['y'] + yoffset,
+        scale * o['radius'],
+        'black')
+
+
+def plot_objects(canvas, w: WorldState):
+    scale = 5 
+    xoffset: float = 300
+    yoffset: float = 600
+    circle(
+        canvas,
+        xoffset + scale * w['position']['x'],
+        yoffset + scale * w['position']['y'],
+        scale * 1.0,
+        'red')
+    [plot_obstacle(canvas, o, xoffset, yoffset, scale)
+     for o in w['obstacles']]
+
+
 def main():
     root = k.Tk()
     root.title('NavNet data generator game')
     root.geometry('800x600')
     canvas = k.Canvas(root, width=650, height=1000, bg='grey')
     canvas.pack()
-    circle(canvas, 200, 800, 60, 'black')
 
     world = World(canvas)
 

@@ -44,8 +44,8 @@ def _random_obstacle_position(bike_position: w.Point) -> w.Point:
     distance_from_bike: float = random.uniform(10, 20)
     angle: float = random.uniform(0, 2*m.pi)
     return {
-        'x': distance_from_bike * m.cos(angle),
-        'y': distance_from_bike * m.sin(angle)}
+        'x': bike_position['x'] + distance_from_bike * m.cos(angle),
+        'y': bike_position['y'] + distance_from_bike * m.sin(angle)}
 
 
 def _random_obstacle_velocity() -> w.Velocity:
