@@ -23,7 +23,7 @@ def speed_mod(speed: float) -> float:
     if speed > 10:
         return 10
     if speed < -10:
-        return -10 
+        return -10
     return speed
 
 
@@ -117,19 +117,20 @@ class World:
         self.images = make_images(self.w)
 
     def update(self):
+        rate = 0.05
         self.canvas.delete('all')
         if crashed_into_obstacle(self.w):
-            # print('Robot has crashed into obstacle.')
+            print('Robot has crashed into obstacle.')
             return
-        print(self.w['velocity'])
+        # print(self.w['velocity'])
         plot_objects(self.canvas, self.w)
-        self.w = update_world(self.w, 0.05)
+        self.w = update_world(self.w, rate)
         self.images = make_images(self.w)
         self.canvas.create_image(320, 110, image=self.images['front'])
         self.canvas.create_image(320, 330, image=self.images['back'])
         self.canvas.create_image(110, 220, image=self.images['left'])
         self.canvas.create_image(530, 220, image=self.images['right'])
-        self.canvas.after(50, self.update)
+        self.canvas.after(int(1/rate), self.update)
 
     def increase_velocity(self, _):
         self.w['velocity'] = update_velocity('up', self.w['velocity'])
@@ -158,7 +159,7 @@ def plot_obstacle(canvas, o: w.Obstacle, xoffset, yoffset, scale):
 
 
 def plot_objects(canvas, w: WorldState):
-    scale = 5 
+    scale = 5
     xoffset: float = 300
     yoffset: float = 600
     circle(

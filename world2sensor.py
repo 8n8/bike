@@ -7,10 +7,15 @@ sensor readings should be.
 import math as m
 from mypy_extensions import TypedDict
 import numpy as np
-from typing import (List)
+from typing import List, Tuple
 
 
 class ImageParameters(TypedDict):
+    x: float
+    y: float
+
+
+class RoundedImageParameters(TypedDict):
     x: int
     y: int
 
@@ -134,7 +139,7 @@ def _camera_properties(
         'front': _generic_cam(orientation, x, y),
         'left': _generic_cam(orientation + m.pi/2, x, y),
         'back': _generic_cam(orientation + m.pi, x, y),
-        'right': _generic_cam(orientation - m.pi/2, x, y)}
+        'right': _generic_cam(orientation + 3*m.pi/2, x, y)}
 
 
 def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
@@ -179,11 +184,14 @@ def _image_of_all_visible_obstacles(
     the camera.  The parameters describing the camera are contained
     in variable 'cam_spec'.
     """
-    image_parameter_list: List[ImageParameters] = [
-        _obstacle_image_parameters(cam_spec, obstacle)
+    parameter_list_with_errs: List[Tuple[str, RoundedImageParameters]] = [
+        _rounded_image_parameters(cam_spec, obstacle)
         for obstacle in obstacle_list]
+    image_parameter_list_no_errs: List[RoundedImageParameters] = [
+        i[1] for i in parameter_list_with_errs
+        if i[0] is None]
     return _convert_thin_image_to_thick(_make_thin_composite_image(
-        image_parameter_list))
+        image_parameter_list_no_errs))
 
 
 def _convert_thin_image_to_thick(
@@ -206,7 +214,7 @@ def _convert_thin_image_to_thick(
 
 
 def _make_thin_composite_image(
-        image_parameter_list: List[ImageParameters]
+        image_parameter_list: List[RoundedImageParameters]
         ) -> 'np.ndarray[bool]':
     """
     It makes an array of bools, representing the image of all the
@@ -232,15 +240,33 @@ def _make_thin_image(x: float, y: float) -> 'np.ndarray[bool]':
     by zeros.
     """
     return np.concatenate((  # type: ignore
-        np.ones(int(x), dtype=bool),
-        np.zeros(int(y), dtype=bool),
-        np.ones(int(100 - x - y), dtype=bool)))
+        np.ones(x, dtype=bool),
+        np.zeros(y, dtype=bool),
+        np.ones(100 - x - y, dtype=bool)))
+
+
+def _rounded_image_parameters(
+        cam: CamSpec,
+        obs: Obstacle
+        ) -> Tuple[str, RoundedImageParameters]:
+    z: float = _width_of_camera_lens(cam)
+
+    def n(a):
+        return int(a * 100 / z)
+
+    err, parameters = _obstacle_image_parameters(cam, obs)
+    if err is not None:
+        return err, None
+    result =  (None, {
+        'x': n(parameters['x']),
+        'y': n(parameters['y'])})
+    return result
 
 
 def _obstacle_image_parameters(
         cam: CamSpec,
         obs: Obstacle
-        ) -> ImageParameters:
+        ) -> Tuple[str, ImageParameters]:
     """
     It takes in the position and orientation of a camera, and the
     position of an obstacle and calculates the parameters needed to
@@ -249,28 +275,40 @@ def _obstacle_image_parameters(
     A diagram is shown in ./simulateTrig.pdf.  The required values are
     x and y (shown on the diagram).
     """
-    points = _calculate_ABCD_coords(cam, obs)
+    print('cam is {}'.format(cam))
+    print('obs is {}'.format(obs))
+    err, points = _calculate_ABCD_coords(cam, obs)
+    if err is not None:
+        return err, None
     X = _flatten_points(points)
-    z: float = _width_of_camera_lens(cam)
-    x: float = 0
-    if X['C'] <= X['B']:
-        return {
+    print(X)
+    A: float = X['A']
+    B: float = X['B']
+    C: float = X['C']
+    D: float = X['D']
+    if A <= B and B <= C and C <= D:
+        print('a')
+        return (None, {
+            'x': B - A,
+            'y': D - C})
+    if B <= A and A <= D and D <= C:
+        print('b')
+        return (None, {
             'x': 0,
-            'y': 0}
-    if X['B'] > 0:
-        x = min(z, X['B'])
-    y: float = 0
-    if X['D'] - X['B'] < 0:
-        return {
+            'y': 100})
+    if B <= A and A <= C and C <= D:
+        print('c')
+        return (None, {
             'x': 0,
-            'y': 0}
-    if X['D'] - X['C'] < 0:
-        y = min(z, X['D'] - X['B'])
-    else:
-        y = min(z, X['C'] - X['B'])
-    return {
-        'x': int(x * 100 / z),
-        'y': int(y * 100 / z)}
+            'y': C - A})
+    if A <= B and B <= D and D <= C:
+        print('d')
+        return (None, {
+            'x': B - A,
+            'y': D - B})
+    return (None, {
+        'x': 0,
+        'y': 0})
 
 
 def _width_of_camera_lens(cam: CamSpec) -> float:
@@ -284,17 +322,23 @@ def _width_of_camera_lens(cam: CamSpec) -> float:
 def _calculate_ABCD_coords(
         cam: CamSpec,
         obs: Obstacle,
-        ) -> FourPoints:
+        ) -> Tuple['str', FourPoints]:
     """
     It calculates the coordinates of the points A, B, C and D, which
     are points along the lens-line of the camera.  They are shown on
     the diagram in ./simulateTrig.pdf.
     """
-    return {
+    err, B = _calculate_B(cam, obs)
+    if err is not None:
+        return err, None
+    err, C = _calculate_C(cam, obs)
+    if err is not None:
+        return err, None
+    return (None, {
         'A': _calculate_A(cam),
-        'B': _calculate_B(cam, obs),
-        'C': _calculate_C(cam, obs),
-        'D': _calculate_D(cam)}
+        'B': B,
+        'C': C,
+        'D': _calculate_D(cam)})
 
 
 class FlatPoints(TypedDict):
@@ -377,7 +421,7 @@ def _calculate_A(cam: CamSpec) -> Point:
         'y': cam['y'] + x2}
 
 
-def _calculate_B(cam: CamSpec, obs: Obstacle,) -> Point:
+def _calculate_B(cam: CamSpec, obs: Obstacle,) -> Tuple[str, Point]:
     """
     It calculates the position of the intercept of the left-hand
     view-line of the obstacle and the lens line.  See diagram and
@@ -396,16 +440,18 @@ def _calculate_B(cam: CamSpec, obs: Obstacle,) -> Point:
     phi2: float = m.asin(obs['radius'] / z)
     phi: float = phi1 + phi2
     u: float = cam['alpha'] - phi
+    if u > m.pi/2:
+        return 'No intersection of lens-line.', None
     d1: float = cam['k'] * m.tan(u)
     s: float = (cam['k']**2 + d1**2)**0.5
     x2: float = s * m.cos(phi)
     x3: float = s * m.sin(phi)
-    return {
+    return (None, {
         'x': cam['x'] + x2,
-        'y': cam['y'] + x3}
+        'y': cam['y'] + x3})
 
 
-def _calculate_C(cam: CamSpec, obs: Obstacle) -> Point:
+def _calculate_C(cam: CamSpec, obs: Obstacle) -> Tuple[str, Point]:
     """
     It calculates the position of the intercept of the right-hand
     view-line of the obstacle and the lens line.  See diagram and
@@ -413,18 +459,27 @@ def _calculate_C(cam: CamSpec, obs: Obstacle) -> Point:
     """
     x1: float = ((obs['position']['x'] - cam['x'])**2
                  + (obs['position']['y'] - cam['y'])**2)**0.5
+    if m.isclose(x1, 0):
+        return 'The obstacle is on the camera.', None
     phi2: float = m.asin(obs['radius'] / x1)
     x5: float = obs['position']['y'] - cam['y']
     phi5: float = m.asin(x5 / x1)
     phi1: float = phi5 - phi2
     phi3: float = cam['alpha'] - phi5
     phi4: float = phi2 + phi3
+    print('phi1 is {}'.format(phi1))
+    print('phi2 is {}'.format(phi2))
+    print('phi3 is {}'.format(phi3))
+    print('phi4 is {}'.format(phi4))
+    print('phi5 is {}'.format(phi5))
+    if phi4 < - m.pi/2:
+        return 'No intersection of lens-line.', None
     s: float = cam['k'] / m.cos(phi4)
     x3: float = s * m.cos(phi1)
     x4: float = s * m.sin(phi1)
-    return {
+    return (None, {
         'x': cam['x'] + x3,
-        'y': cam['y'] + x4}
+        'y': cam['y'] + x4})
 
 
 def _calculate_D(cam: CamSpec) -> Point:
