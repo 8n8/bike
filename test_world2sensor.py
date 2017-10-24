@@ -135,7 +135,7 @@ def test_calculate_C2():
         'y': 0,
         'k': 0.1,
         'theta': m.pi/2,
-        'alpha': 0} 
+        'alpha': 0}
     obs: s.Obstacle = {
         'position': {
             'x': 5,

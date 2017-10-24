@@ -240,9 +240,9 @@ def _make_thin_image(x: float, y: float) -> 'np.ndarray[bool]':
     by zeros.
     """
     return np.concatenate((  # type: ignore
-        np.ones(x, dtype=bool),
-        np.zeros(y, dtype=bool),
-        np.ones(100 - x - y, dtype=bool)))
+        np.ones(x, dtype=bool),  # type: ignore
+        np.zeros(y, dtype=bool),  # type: ignore
+        np.ones(100 - x - y, dtype=bool)))  # type: ignore
 
 
 def _rounded_image_parameters(
@@ -257,10 +257,10 @@ def _rounded_image_parameters(
     err, parameters = _obstacle_image_parameters(cam, obs)
     if err is not None:
         return err, None
-    result =  (None, {
+    result: RoundedImageParameters = {
         'x': n(parameters['x']),
-        'y': n(parameters['y'])})
-    return result
+        'y': n(parameters['y'])}
+    return None, result
 
 
 def _obstacle_image_parameters(
@@ -451,35 +451,182 @@ def _calculate_B(cam: CamSpec, obs: Obstacle,) -> Tuple[str, Point]:
         'y': cam['y'] + x3})
 
 
+def _calculate_B_new(
+        a1: float,
+        a2: float,
+        b1: float,
+        b2: float,
+        k1: float,
+        k2: float,
+        r: float
+        ) -> Tuple[str, Point]:
+    a12 = a1**2
+    a22 = a2**2
+    b12 = b1**2
+    b13 = b1**3
+    b22 = b2**2
+    b23 = b2**3
+    k12 = k1**2
+    k13 = k1**3
+    k22 = k2**2
+    k23 = k2**3
+    r2 = r**2
+    square_root_contents: float = (
+        a12 - 2*a1*b1 + a22 - 2*a2*b2 + b12 + b22 - r2)
+    if square_root_contents < 0:
+        return 'Negative square root.', None
+    square_root = m.sqrt(square_root_contents)
+    denominator: float = (
+        a12*k12 + 2*a1*a2*k1*k2 - 2*a1*b1*k12 - 2*a1*b2*k1*k2
+        + a22*k22 - 2*a2*b1*k1*k2 - 2*a2*b2*k22 + b12*k12
+        + 2*b1*b2*k1*k2 + b22*k22 - k12*r2 - k22*r2)
+    if m.isclose(denominator, 0):
+        return 'Denominator is zero so no result.', None
+    return (None, {
+        'x': ((a12*b1*k12 + a12*k13 + a12*k1*k22 + 2*a1*a2*b1*k1*k2
+               + a1*a2*k12*k2 + a1*a2*k23 - 2*a1*b12*k12
+               - 2*a1*b1*b2*k1*k2 - 2*a1*b1*k13 - 2*a1*b1*k1*k22
+               - a1*b2*k12*k2 - a1*b2*k23 + a22*b1*k22
+               - 2*a2*b12*k1*k2 - 2*a2*b1*b2*k22 - a2*b1*k12*k2
+               - a2*b1*k23 + b13*k12 + 2*b12*b2*k1*k2 + b12*k13
+               + b12*k1*k22 + b1*b22*k22 + b1*b2*k12*k2 + b1*b2*k23
+               - b1*k12*r2 - b1*k22*r2 - k13*r2 - k12*k2*r*square_root
+               - k1*k22*r2 - k23*r*square_root)
+              / denominator),
+        'y': ((a12*b2*k12 + 2*a1*a2*b2*k1*k2 + a1*a2*k13 + a1*a2*k1*k22
+               - 2*a1*b1*b2*k12 - 2*a1*b22*k1*k2 - a1*b2*k13
+               - a1*b2*k1*k22 + a22*b2*k22 + a22*k12*k2 + a22*k23
+               - 2*a2*b1*b2*k1*k2 - a2*b1*k13 - a2*b1*k1*k22
+               - 2*a2*b22*k22 - 2*a2*b2*k12*k2 - 2*a2*b2*k23
+               + b12*b2*k12 + 2*b1*b22*k1*k2 + b1*b2*k13 + b1*b2*k1*k22
+               + b23*k22 + b22*k12*k2 + b22*k23 - b2*k12*r2 - b2*k22*r2
+               - k12*k2*r2 + k1*r*(k12 + k22) * square_root - k23*r2)
+              / denominator)})
+
+
+def _calculate_A1(
+        a1: float,
+        a2: float,
+        b1: float,
+        b2: float,
+        k1: float,
+        k2: float,
+        r: float
+        ) -> float:
+    return (
+        (a1**2*b1*k1**2 + a1**2*k1**3 + a1**2*k1*k2**2 + 2*a1*a2*b1*k1*k2
+         + a1*a2*k1**2*k2 + a1*a2*k2**3 - 2*a1*b1**2*k1**2
+         - 2*a1*b1*b2*k1*k2 - 2*a1*b1*k1**3 - 2*a1*b1*k1*k2**2
+         - a1*b2*k1**2*k2 - a1*b2*k2**3 + a2**2*b1*k2**2
+         - 2*a2*b1**2*k1*k2 - 2*a2*b1*b2*k2**2 - a2*b1*k1**2*k2
+         - a2*b1*k2**3 + b1**3*k1**2 + 2*b1**2*b2*k1*k2 + b1**2*k1**3
+         + b1**2*k1*k2**2 + b1*b2**2*k2**2 + b1*b2*k1**2*k2 + b1*b2*k2**3
+         - b1*k1**2*r**2 - b1*k2**2*r**2 - k1**3*r**2 - k1**2*k2*r
+         * m.sqrt(a1**2 - 2*a1*b1 + a2**2 - 2*a2*b2 + b1**2 + b2**2 - r**2)
+         - k1*k2**2*r**2 - k2**3*r
+         * m.sqrt(a1**2 - 2*a1*b1 + a2**2 - 2*a2*b2 + b1**2 + b2**2
+                  - r**2))
+        / (a1**2*k1**2 + 2*a1*a2*k1*k2 - 2*a1*b1*k1**2 - 2*a1*b2*k1*k2
+           + a2**2*k2**2 - 2*a2*b1*k1*k2 - 2*a2*b2*k2**2 + b1**2*k1**2
+           + 2*b1*b2*k1*k2 + b2**2*k2**2 - k1**2*r**2 - k2**2*r**2))
+
+
+def _calculate_A2(
+        a1: float,
+        a2: float,
+        b1: float,
+        b2: float,
+        k1: float,
+        k2: float,
+        r: float
+        ) -> float:
+    return (
+        (a1**2*b2*k1**2 + 2*a1*a2*b2*k1*k2 + a1*a2*k1**3 + a1*a2*k1*k2**2
+         - 2*a1*b1*b2*k1**2 - 2*a1*b2**2*k1*k2 - a1*b2*k1**3
+         - a1*b2*k1*k2**2 + a2**2*b2*k2**2 + a2**2*k1**2*k2 + a2**2*k2**3
+         - 2*a2*b1*b2*k1*k2 - a2*b1*k1**3 - a2*b1*k1*k2**2
+         - 2*a2*b2**2*k2**2 - 2*a2*b2*k1**2*k2 - 2*a2*b2*k2**3
+         + b1**2*b2*k1**2 + 2*b1*b2**2*k1*k2 + b1*b2*k1**3
+         + b1*b2*k1*k2**2 + b2**3*k2**2 + b2**2*k1**2*k2 + b2**2*k2**3
+         - b2*k1**2*r**2 - b2*k2**2*r**2 - k1**2*k2*r**2
+         + k1*r*(k1**2 + k2**2)
+         * m.sqrt(a1**2 - 2*a1*b1 + a2**2 - 2*a2*b2 + b1**2 + b2**2 - r**2)
+         - k2**3*r**2)
+        / (a1**2*k1**2 + 2*a1*a2*k1*k2 - 2*a1*b1*k1**2 - 2*a1*b2*k1*k2
+           + a2**2*k2**2 - 2*a2*b1*k1*k2 - 2*a2*b2*k2**2 + b1**2*k1**2
+           + 2*b1*b2*k1*k2 + b2**2*k2**2 - k1**2*r**2 - k2**2*r**2))
+
+
+def _calculate_C_new(
+        a1: float,
+        a2: float,
+        b1: float,
+        b2: float,
+        k1: float,
+        k2: float,
+        r: float
+        ) -> Tuple[str, Point]:
+    a12 = a1**2
+    a22 = a2**2
+    b12 = b1**2
+    b22 = b2**2
+    k12 = k1**2
+    k22 = k2**2
+    r2 = r**2
+    denominator: float = (
+        a12*k12 + 2*a1*a2*k1*k2 - 2*a1*b1*k12 - 2*a1*b2*k1*k2
+        + a22*k22 - 2*a2*b1*k1*k2 - 2*a2*b2*k22 + b12*k12
+        + 2*b1*b2*k1*k2 + b22*k22 - k12*r2 - k22*r2)
+    if m.isclose(denominator, 0):
+        return "No solution: denominator is zero.", None
+    square_root_contents: float = (
+        a12 - 2*a1*b1 + a22 - 2*a2*b2 + b12 + b22 - r2)
+    if square_root_contents < 0:
+        return "No real solution.", None
+    square_root = m.sqrt(square_root_contents)
+    numerator: float = (
+        a12*k1*k2 - a1*a2*k12 + a1*a2*k22 - 2*a1*b1*k1*k2
+        + a1*b2*k12 - a1*b2*k22 - a22*k1*k2 + a2*b1*k12
+        - a2*b1*k22 + 2*a2*b2*k1*k2 + b12*k1*k2 - b1*b2*k12
+        + b1*b2*k22 - b22*k1*k2)
+    common: float = (
+        (numerator + (k12 + k22) * r * square_root) / denominator)
+    A1: float = k2 * common
+    A2: float = - k1 * common
+    return (None, {
+        'x': A1 + b1 + k1,
+        'y': A2 + b2 + k2})
+
+
 def _calculate_C(cam: CamSpec, obs: Obstacle) -> Tuple[str, Point]:
     """
     It calculates the position of the intercept of the right-hand
     view-line of the obstacle and the lens line.  See diagram and
     workings in ./simulateTrig.pdf.
     """
-    x1: float = ((obs['position']['x'] - cam['x'])**2
-                 + (obs['position']['y'] - cam['y'])**2)**0.5
-    if m.isclose(x1, 0):
-        return 'The obstacle is on the camera.', None
-    phi2: float = m.asin(obs['radius'] / x1)
-    x5: float = obs['position']['y'] - cam['y']
-    phi5: float = m.asin(x5 / x1)
-    phi1: float = phi5 - phi2
-    phi3: float = cam['alpha'] - phi5
-    phi4: float = phi2 + phi3
-    print('phi1 is {}'.format(phi1))
-    print('phi2 is {}'.format(phi2))
-    print('phi3 is {}'.format(phi3))
-    print('phi4 is {}'.format(phi4))
-    print('phi5 is {}'.format(phi5))
-    if phi4 < - m.pi/2:
-        return 'No intersection of lens-line.', None
-    s: float = cam['k'] / m.cos(phi4)
-    x3: float = s * m.cos(phi1)
-    x4: float = s * m.sin(phi1)
-    return (None, {
-        'x': cam['x'] + x3,
-        'y': cam['y'] + x4})
+    # x1: float = ((obs['position']['x'] - cam['x'])**2
+    #              + (obs['position']['y'] - cam['y'])**2)**0.5
+    # if m.isclose(x1, 0):
+    #     return 'The obstacle is on the camera.', None
+    # phi2: float = m.asin(obs['radius'] / x1)
+    # x5: float = obs['position']['y'] - cam['y']
+    # phi5: float = m.asin(x5 / x1)
+    # phi1: float = phi5 - phi2
+    # phi3: float = cam['alpha'] - phi5
+    # phi4: float = phi2 + phi3
+    # print('phi1 is {}'.format(phi1))
+    # print('phi2 is {}'.format(phi2))
+    # print('phi3 is {}'.format(phi3))
+    # print('phi4 is {}'.format(phi4))
+    # print('phi5 is {}'.format(phi5))
+    # if phi4 < - m.pi/2:
+    #     return 'No intersection of lens-line.', None
+    # s: float = cam['k'] / m.cos(phi4)
+    # x3: float = s * m.cos(phi1)
+    # x4: float = s * m.sin(phi1)
+    # return (None, {
+    #     'x': cam['x'] + x3,
+    #     'y': cam['y'] + x4})
 
 
 def _calculate_D(cam: CamSpec) -> Point:
