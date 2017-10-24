@@ -1,5 +1,4 @@
 import sympy as s  # type: ignore
-from sympy.assumptions.assume import global_assumptions as g
 
 A1 = s.Symbol('A1')
 A2 = s.Symbol('A2')
@@ -22,8 +21,5 @@ equations = [
     R1*B1+R2*B2,
     k1*A1+k2*A2,
     R1*(k1+A1)+R2*(k2+A2)]
-
-g.add(s.Q.is_true(r > 0))
-g.add(s.Q.is_true(B1*R1 > B2*R2))
 
 print(s.solve(equations, [A1, A2, B1, B2, R1, R2]))

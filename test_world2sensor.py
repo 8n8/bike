@@ -49,8 +49,12 @@ def test_obstacle_image_parameters2():
             'y': 0},
         'radius': 0.05}
     err, result = s._obstacle_image_parameters(cam, obs)
-    assert err is not None
-    assert result is None
+    print(result)
+    assert err is None
+    assert isclose(result['A'], 0)
+    assert isclose(result['B'], 0.066)
+    assert isclose(result['C'], -0.036)
+    assert isclose(result['D'], 0.2)
 
 
 def test_calculate_ABCD_coords():
@@ -69,9 +73,11 @@ def test_calculate_ABCD_coords():
             'y': 0},
         'radius': 0.05}
     err, result = s._calculate_ABCD_coords(cam, obs)
-    assert err is not None
-    assert result is None
-
+    assert err is None
+    assert isclose(result['A']['x'], -0.1)
+    assert isclose(result['B']['x'], -0.136)
+    assert isclose(result['C']['x'], -0.0356)
+    assert isclose(result['D']['x'], 0.1)
 
 def test_flatten_points():
     points_in: s.FourPoints = {
@@ -144,8 +150,10 @@ def test_calculate_C2():
             'x': 0,
             'y': 0},
         'radius': 0.5}
-    err, _ = s._calculate_C(cam, obs)
-    assert err is not None
+    err, C = s._calculate_C(cam, obs)
+    assert err is None
+    assert m.isclose(C['x'], 0.1)
+    assert m.isclose(C['y'], 0)
 
 
 def test_calculate_B2():
@@ -164,7 +172,9 @@ def test_calculate_B2():
             'y': 0},
         'radius': 0.05}
     err, B = s._calculate_B(cam, obs)
-    assert err is not None
+    assert err is None
+    assert isclose(B['x'], -0.136)
+    assert isclose(B['y'], 0.1)
 
 
 def test_calculate_B():
@@ -200,7 +210,7 @@ def test_calculate_A():
 
 
 def isclose(a, b):
-    return abs(a - b) < 0.001
+    return abs(a - b) < 0.01
 
 
 # def world1() -> s.WorldState:
