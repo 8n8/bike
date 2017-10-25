@@ -267,9 +267,8 @@ def _obstacle_image_parameters(
     A diagram is shown in ./simulateTrig.pdf.  The required values are
     x and y (shown on the diagram).
     """
-    print('cam is {}'.format(cam))
-    print('obs is {}'.format(obs))
     err, points = _calculate_ABCD_coords(cam, obs)
+    print(points)
     if err is not None:
         return err, None
     X = _flatten_points(points)
@@ -278,30 +277,28 @@ def _obstacle_image_parameters(
     B: float = X['B']
     C: float = X['C']
     D: float = X['D']
-    print('A, B, C, and D are {}, {}, {} and {}'.format(A, B, C, D))
+    # The alternatives for when the obstacle is in view are:
+    #     ABCD -> x = B - A, y = C - B
+    #     BACD -> x = 0, y = C - A
+    #     BADC -> x = 0, y = 100
+    #     ABDC -> x = B - A, y = D - B
     if A <= B and B <= C and C <= D:
-        print('a')
         return (None, {
             'x': B - A,
-            'y': D - C})
-    if B <= A and A <= D and D <= C:
-        print('b')
-        return (None, {
-            'x': 0,
-            'y': 100})
+            'y': C - B})
     if B <= A and A <= C and C <= D:
-        print('c')
         return (None, {
             'x': 0,
             'y': C - A})
+    if B <= A and A <= D and D <= C:
+        return (None, {
+            'x': 0,
+            'y': 100})
     if A <= B and B <= D and D <= C:
-        print('d')
         return (None, {
             'x': B - A,
             'y': D - B})
-    return (None, {
-        'x': 0,
-        'y': 0})
+    return "Obstacle is out of sight.", None
 
 
 def _width_of_camera_lens(cam: CamSpec) -> float:
@@ -331,10 +328,10 @@ def _calculate_ABCD_coords(
     # From the diagram in world2sensor_geometry.pdf it can be seen that
     # the obstacle is out of sight of the camera if C x A or D x B is in
     # the negative k-direction.
-    CxA = CL['x']*AL['y'] - CL['y']*AL['x']
-    DxB = DL['x']*BL['y'] - DL['y']*BL['x']
-    if CxA < 0 or DxB < 0:
-        return "Obstacle is out of sight.", None
+    # CxA = CL['x']*AL['y'] - CL['y']*AL['x']
+    # DxB = DL['x']*BL['y'] - DL['y']*BL['x']
+    # if CxA < 0 or DxB < 0:
+    #     return "Obstacle is out of sight.", None
     return (None, {
         'A': vectorSum(AL, cam['position']),
         'B': vectorSum(BL, cam['position']),
@@ -459,19 +456,24 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
                     Q . C = 0
                       |Q| = r
 
-    The unknowns needed for finding B are:
+    Let G+F = S, then the unknowns needed for finding B are:
 
-        B, F (= B-C), P, M
+        B, S, M, P
 
     The equations are:
 
-                C + F - B = 0
-        F + M - P + Q - N = 0
+                B - S - k = 0
+        n + P - M - B - t = 0
 
+                    S . k = 0
                     P . M = 0
                     P . B = 0
-                    k . F = 0
                       |P| = r
+
+    These equations were solved using sympy, a symbolic numeric algebra
+    library for Python.  The files containing the code are named
+    'w2s_solve_for_*.py' where * is the vector name.  The corresponding
+    solution files end in 'txt'.
     """
     t1 = cam['position']['x']
     t2 = cam['position']['y']
@@ -481,50 +483,26 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
     k2 = cam['k'] * m.sin(cam['alpha'])
     r = obs['radius']
     cos_half_theta = m.cos(cam['theta']/2)
-    return {
-        'A': _find_A1(k1, k2, cos_half_theta),
-        'B': _find_B1(),
+    return (None, {
+        'A': _find_A(k1, k2, cos_half_theta),
+        'B': _find_B1(k1, k2, n1, n2, t1, t2, r),
         'C': _find_C1(k1, k2, n1, n2, t1, t2, r),
-        'D': _find_D1(k1, k2, cos_half_theta)}
+        'D': _find_D(k1, k2, cos_half_theta)})
 
 
-def _find_B1():
-    return {
-        'x': 0,
-        'y': 0}
-
-
-def _find_B2():
-    return {
-        'x': 0,
-        'y': 0}
-
-
-def _find_A1(k1, k2, cos_half_theta) -> Vector:
+def _find_A(k1: float, k2: float, cos_half_theta: float) -> Vector:
     return {
         'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
         'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
 
 
-def _find_D1(k1, k2, cos_half_theta) -> Vector:
+def _find_D(k1: float, k2: float, cos_half_theta: float) -> Vector:
     return {
         'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
         'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
 
 
-def _find_A2(k1, k2, cos_half_theta) -> Vector:
-    return {
-        'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-        'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
-
-
-def _find_D2(k1, k2, cos_half_theta) -> Vector:
-    return {
-        'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-        'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
-
-
-def _find_C1(
+def _find_C2(
         k1: float,
         k2: float,
         n1: float,
@@ -538,14 +516,41 @@ def _find_C1(
         'y': (k1**3*n1*n2 - k1**3*n1*t2 - k1**3*n2*t1 + k1**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**3*t1*t2 + k1**2*k2*n2**2 - 2*k1**2*k2*n2*t2 - k1**2*k2*r**2 + k1**2*k2*t2**2 + k1*k2**2*n1*n2 - k1*k2**2*n1*t2 - k1*k2**2*n2*t1 + k1*k2**2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1*k2**2*t1*t2 + k2**3*n2**2 - 2*k2**3*n2*t2 - k2**3*r**2 + k2**3*t2**2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2)}
 
 
-def _find_C2(
+def _find_C1(
         k1: float,
         k2: float,
         n1: float,
         n2: float,
         t1: float,
         t2: float,
-        n: float,
+        r: float
+        ) -> Vector:
+    return {
+        'x': (k1**3*n1**2 - 2*k1**3*n1*t1 - k1**3*r**2 + k1**3*t1**2 + k1**2*k2*n1*n2 - k1**2*k2*n1*t2 - k1**2*k2*n2*t1 + k1**2*k2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**2*k2*t1*t2 + k1*k2**2*n1**2 - 2*k1*k2**2*n1*t1 - k1*k2**2*r**2 + k1*k2**2*t1**2 + k2**3*n1*n2 - k2**3*n1*t2 - k2**3*n2*t1 + k2**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k2**3*t1*t2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2),
+        'y': (k1**3*n1*n2 - k1**3*n1*t2 - k1**3*n2*t1 - k1**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**3*t1*t2 + k1**2*k2*n2**2 - 2*k1**2*k2*n2*t2 - k1**2*k2*r**2 + k1**2*k2*t2**2 + k1*k2**2*n1*n2 - k1*k2**2*n1*t2 - k1*k2**2*n2*t1 - k1*k2**2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1*k2**2*t1*t2 + k2**3*n2**2 - 2*k2**3*n2*t2 - k2**3*r**2 + k2**3*t2**2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2)}
+
+
+def _find_B1(
+        k1: float,
+        k2: float,
+        n1: float,
+        n2: float,
+        t1: float,
+        t2: float,
+        r: float
+        ) -> Vector:
+    return {
+        'x': (k1**3*n1**2 - 2*k1**3*n1*t1 - k1**3*r**2 + k1**3*t1**2 + k1**2*k2*n1*n2 - k1**2*k2*n1*t2 - k1**2*k2*n2*t1 - k1**2*k2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**2*k2*t1*t2 + k1*k2**2*n1**2 - 2*k1*k2**2*n1*t1 - k1*k2**2*r**2 + k1*k2**2*t1**2 + k2**3*n1*n2 - k2**3*n1*t2 - k2**3*n2*t1 - k2**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k2**3*t1*t2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2),
+        'y': (k1**3*n1*n2 - k1**3*n1*t2 - k1**3*n2*t1 + k1**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**3*t1*t2 + k1**2*k2*n2**2 - 2*k1**2*k2*n2*t2 - k1**2*k2*r**2 + k1**2*k2*t2**2 + k1*k2**2*n1*n2 - k1*k2**2*n1*t2 - k1*k2**2*n2*t1 + k1*k2**2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1*k2**2*t1*t2 + k2**3*n2**2 - 2*k2**3*n2*t2 - k2**3*r**2 + k2**3*t2**2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2)}
+
+
+def _find_B2(
+        k1: float,
+        k2: float,
+        n1: float,
+        n2: float,
+        t1: float,
+        t2: float,
         r: float
         ) -> Vector:
     return {
