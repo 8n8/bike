@@ -461,12 +461,12 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
 
     The unknowns needed for finding B are:
 
-        B, F, P, M
+        B, F (= B-C), P, M
 
     The equations are:
 
-                    C + F - B = 0
-        F + M - P - n + t + C = 0
+                C + F - B = 0
+        F + M - P + Q - N = 0
 
                     P . M = 0
                     P . B = 0
