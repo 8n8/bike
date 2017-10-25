@@ -422,6 +422,64 @@ def _calculate_A(cam: CamSpec) -> Point:
         'y': cam['y'] + x2}
 
 
+def _solve_geometry(cam: CamSpec, obs: Obstacle):
+    """
+    It works out the vectors needed for creating the camera images, using
+    the configuration of the camera and the position of the obstacle.
+
+    The vectors are drawn in the diagram in world2sensor_geometry.pdf. The
+    z-axis is perpendicular to the page and positive when pointing towards
+    the reader.  The required vectors are A, B, C, and D.  All the
+    variables with lower-case names are known.  The vectors A and D can be
+    found separately from the others.  The equations are:
+
+                A + D - 2k = 0      v1
+
+        cos(ϴ/2) - |k|/|A| = 0      s1
+        cos(ϴ/2) - |k|/|D| = 0      s2
+
+    The remaining 8 unknowns are:
+
+        B, C, F, G, M, N, P, Q
+
+                C + F - B = 0       v2
+                k + G - C = 0       v3
+        F + M - P + Q - N = 0       v4
+        t + B + M - P - n = 0       v5
+
+                 k . G = 0      s3
+                 k . F = 0      s4
+                 P . M = 0      s5
+                 P . B = 0      s6
+                 Q . N = 0      s7
+                 Q . C = 0      s8
+                   |P| = r      s9
+                   |Q| = r      s10
+                   
+    From the diagram, the unknowns needed for finding C are:
+        
+        C, G, N, Q
+
+    The equations are:
+        
+                C - G - k = 0
+        n + Q - N - C - t = 0
+
+                    G . k = 0
+                    Q . N = 0
+                    Q . C = 0
+                      |Q| = r
+    """
+    t1 = cam['x']
+    t2 = cam['y']
+    n1 = obs['position']['x']
+    n2 = obs['position']['y']
+    k1 = cam['k'] * m.cos['alpha']
+    k2 = cam['k'] * m.sin['alpha']
+    r = obs['radius']
+    cos_half_theta = m.cos(cam['theta']/2)
+
+
 def _calculate_B(cam: CamSpec, obs: Obstacle) -> Tuple[str, Point]:
     a1: float = obs['position']['x']
     a2: float = obs['position']['y']

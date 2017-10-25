@@ -79,6 +79,7 @@ def test_calculate_ABCD_coords():
     assert isclose(result['C']['x'], -0.0356)
     assert isclose(result['D']['x'], 0.1)
 
+
 def test_flatten_points():
     points_in: s.FourPoints = {
         'A': {'x': -0.1, 'y': 0.1},
