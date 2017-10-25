@@ -5,8 +5,9 @@ import world2sensor as s
 
 def test_rounded_image_parameters():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -25,8 +26,9 @@ def test_rounded_image_parameters():
 
 def test_width_of_camera_lens():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -35,8 +37,9 @@ def test_width_of_camera_lens():
 
 def test_obstacle_image_parameters2():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -59,8 +62,9 @@ def test_obstacle_image_parameters2():
 
 def test_calculate_ABCD_coords():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -106,8 +110,9 @@ def test_compare_to_AD():
 
 def test_calculate_D():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -118,8 +123,9 @@ def test_calculate_D():
 
 def test_calculate_C():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -138,8 +144,9 @@ def test_calculate_C():
 
 def test_calculate_C2():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': 0}
@@ -159,8 +166,9 @@ def test_calculate_C2():
 
 def test_calculate_B2():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -180,8 +188,9 @@ def test_calculate_B2():
 
 def test_calculate_B():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}
@@ -200,8 +209,9 @@ def test_calculate_B():
 
 def test_calculate_A():
     cam: s.CamSpec = {
-        'x': 0,
-        'y': 0,
+        'position': {
+            'x': 0,
+            'y': 0},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': m.pi/2}

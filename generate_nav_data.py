@@ -49,7 +49,7 @@ def delete_near_obstacles(os: List[w.Obstacle]) -> List[w.Obstacle]:
 
 
 def single_data_point() -> NNData:
-    pos: w.Point = {'x': 0, 'y': 0}
+    pos: w.Vector = {'x': 0, 'y': 0}
 
     def g(os, t):
         return delete_near_obstacles(u.main(os, t, pos))

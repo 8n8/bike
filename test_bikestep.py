@@ -10,8 +10,9 @@ def bikestate1() -> w.BikeState:
         'phidot': 0.0,
         'delta': 0.0,
         'deltadot': 0.0,
-        'x': 0.0,
-        'y': 0.0,
+        'position': {
+            'x': 0.0,
+            'y': 0.0},
         'Tdelta': 0.0,
         'Tm': 10.0}
 
@@ -24,8 +25,9 @@ def bikestate2() -> w.BikeState:
         'phidot': 0.0,
         'delta': 0.0,
         'deltadot': 0.0,
-        'x': 0.0,
-        'y': 0.0,
+        'position': {
+            'x': 0.0,
+            'y': 0.0},
         'Tdelta': 0.0,
         'Tm': 10.0}
 
@@ -38,8 +40,9 @@ def bikestate3() -> w.BikeState:
         'phidot': 0.0,
         'delta': 0.5,
         'deltadot': 0.0,
-        'x': 0.0,
-        'y': 0.0,
+        'position': {
+            'x': 0.0,
+            'y': 0.0},
         'Tdelta': 0.0,
         'Tm': 10.0}
 

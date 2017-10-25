@@ -20,35 +20,29 @@ class RoundedImageParameters(TypedDict):
     y: int
 
 
-class Velocity(TypedDict):
-    x: float
-    y: float
-
-
-class Point(TypedDict):
+class Vector(TypedDict):
     x: float
     y: float
 
 
 class Obstacle(TypedDict):
-    position: Point
-    velocity: Velocity
+    position: Vector
+    velocity: Vector
     radius: float
 
 
 class CamSpec(TypedDict):
-    x: float
-    y: float
+    position: Vector
     k: float
     theta: float
     alpha: float
 
 
 class FourPoints(TypedDict):
-    A: Point
-    B: Point
-    C: Point
-    D: Point
+    A: Vector
+    B: Vector
+    C: Vector
+    D: Vector
 
 
 class BikeState(TypedDict):
@@ -60,8 +54,7 @@ class BikeState(TypedDict):
     deltadot: float
     Tdelta: float
     Tm: float
-    x: float
-    y: float
+    position: Vector
 
 
 class WorldState(TypedDict):
@@ -81,7 +74,7 @@ class SensorReadings(TypedDict):
     velocity: float
     lean_acceleration: float
     steer: float
-    gps: Point
+    gps: Vector
 
 
 class AllCamSpecs(TypedDict):
@@ -115,15 +108,15 @@ def main(world_state: WorldState) -> SensorReadings:
     return {
         'cameras': _calculate_images(
             world_state['obstacles'],
-            world_state['bike']['x'],
-            world_state['bike']['y'],
+            world_state['bike']['position']['x'],
+            world_state['bike']['position']['y'],
             world_state['bike']['psi']),
         'lean_acceleration': world_state['bike']['phidot'],
         'steer': world_state['bike']['delta'],
         'velocity': world_state['bike']['v'],
         'gps': {
-            'x': world_state['bike']['x'],
-            'y': world_state['bike']['y']}}
+            'x': world_state['bike']['position']['x'],
+            'y': world_state['bike']['position']['y']}}
 
 
 def _camera_properties(
@@ -144,8 +137,7 @@ def _camera_properties(
 
 def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
     return {
-        'x': x,
-        'y': y,
+        'position': {'x': x, 'y': y},
         'k': 0.1,
         'theta': m.pi/2,
         'alpha': alpha}
@@ -329,17 +321,31 @@ def _calculate_ABCD_coords(
     are points along the lens-line of the camera.  They are shown on
     the diagram in ./simulateTrig.pdf.
     """
-    err, B = _calculate_B(cam, obs)
+    err, rel2cam = _solve_geometry(cam, obs)
     if err is not None:
         return err, None
-    err, C = _calculate_C(cam, obs)
-    if err is not None:
-        return err, None
+    AL: Vector = rel2cam['A']
+    BL: Vector = rel2cam['B']
+    CL: Vector = rel2cam['C']
+    DL: Vector = rel2cam['D']
+    # From the diagram in world2sensor_geometry.pdf it can be seen that
+    # the obstacle is out of sight of the camera if C x A or D x B is in
+    # the negative k-direction.
+    CxA = CL['x']*AL['y'] - CL['y']*AL['x']
+    DxB = DL['x']*BL['y'] - DL['y']*BL['x']
+    if CxA < 0 or DxB < 0:
+        return "Obstacle is out of sight.", None
     return (None, {
-        'A': _calculate_A(cam),
-        'B': B,
-        'C': C,
-        'D': _calculate_D(cam)})
+        'A': vectorSum(AL, cam['position']),
+        'B': vectorSum(BL, cam['position']),
+        'C': vectorSum(CL, cam['position']),
+        'D': vectorSum(DL, cam['position'])})
+
+
+def vectorSum(a: Vector, b: Vector) -> Vector:
+    return {
+        'x': a['x'] + b['x'],
+        'y': a['y'] + b['y']}
 
 
 class FlatPoints(TypedDict):
@@ -357,7 +363,7 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
     by treating the common line as a real number line with A at 0 and
     D on the positive side of A.
     """
-    def flatten(point: Point) -> float:
+    def flatten(point: Vector) -> float:
         return _compare_to_AD(points['A'], points['D'], point)
     Bflat: float = flatten(points['B'])
     Cflat: float = flatten(points['C'])
@@ -373,7 +379,7 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
         'D': Dflat}
 
 
-def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
+def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
     """
     Each of the inputs contains two coordinates describing a point in
     a 2D Cartesian coordinate system.  All three points are on the same
@@ -399,7 +405,7 @@ def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
         [m.cos(angle), m.sin(angle)],
         [-m.sin(angle), m.cos(angle)]])
 
-    def flatten(p: Point) -> float:
+    def flatten(p: Vector) -> float:
         return np.matmul(  # type: ignore
             rotation,
             np.array([[p['x']], [p['y']]]))[0][0]
@@ -408,7 +414,7 @@ def _compare_to_AD(A: Point, D: Point, X: Point) -> float:
     return Xnew - Anew
 
 
-def _calculate_A(cam: CamSpec) -> Point:
+def _calculate_A(cam: CamSpec) -> Vector:
     """
     It calculates the position of the left-hand side of the camera
     lens.  See diagram and workings in ./simulatorTrig.pdf.
@@ -418,8 +424,8 @@ def _calculate_A(cam: CamSpec) -> Point:
     x1: float = p * m.cos(beta)
     x2: float = p * m.sin(beta)
     return {
-        'x': cam['x'] - x1,
-        'y': cam['y'] + x2}
+        'x': cam['position']['x'] - x1,
+        'y': cam['position']['y'] + x2}
 
 
 def _solve_geometry(cam: CamSpec, obs: Obstacle):
@@ -430,38 +436,21 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
     The vectors are drawn in the diagram in world2sensor_geometry.pdf. The
     z-axis is perpendicular to the page and positive when pointing towards
     the reader.  The required vectors are A, B, C, and D.  All the
-    variables with lower-case names are known.  The vectors A and D can be
-    found separately from the others.  The equations are:
+    variables with lower-case names are known.
+
+    The equations for finding A and D are:
 
                 A + D - 2k = 0      v1
 
         cos(ϴ/2) - |k|/|A| = 0      s1
         cos(ϴ/2) - |k|/|D| = 0      s2
 
-    The remaining 8 unknowns are:
-
-        B, C, F, G, M, N, P, Q
-
-                C + F - B = 0       v2
-                k + G - C = 0       v3
-        F + M - P + Q - N = 0       v4
-        t + B + M - P - n = 0       v5
-
-                 k . G = 0      s3
-                 k . F = 0      s4
-                 P . M = 0      s5
-                 P . B = 0      s6
-                 Q . N = 0      s7
-                 Q . C = 0      s8
-                   |P| = r      s9
-                   |Q| = r      s10
-                   
     From the diagram, the unknowns needed for finding C are:
-        
+
         C, G, N, Q
 
     The equations are:
-        
+
                 C - G - k = 0
         n + Q - N - C - t = 0
 
@@ -469,22 +458,106 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
                     Q . N = 0
                     Q . C = 0
                       |Q| = r
+
+    The unknowns needed for finding B are:
+
+        B, F, P, M
+
+    The equations are:
+
+                    C + F - B = 0
+        F + M - P - n + t + C = 0
+
+                    P . M = 0
+                    P . B = 0
+                    k . F = 0
+                      |P| = r
     """
-    t1 = cam['x']
-    t2 = cam['y']
+    t1 = cam['position']['x']
+    t2 = cam['position']['y']
     n1 = obs['position']['x']
     n2 = obs['position']['y']
-    k1 = cam['k'] * m.cos['alpha']
-    k2 = cam['k'] * m.sin['alpha']
+    k1 = cam['k'] * m.cos(cam['alpha'])
+    k2 = cam['k'] * m.sin(cam['alpha'])
     r = obs['radius']
     cos_half_theta = m.cos(cam['theta']/2)
+    return {
+        'A': _find_A1(k1, k2, cos_half_theta),
+        'B': _find_B1(),
+        'C': _find_C1(k1, k2, n1, n2, t1, t2, r),
+        'D': _find_D1(k1, k2, cos_half_theta)}
 
 
-def _calculate_B(cam: CamSpec, obs: Obstacle) -> Tuple[str, Point]:
+def _find_B1():
+    return {
+        'x': 0,
+        'y': 0}
+
+
+def _find_B2():
+    return {
+        'x': 0,
+        'y': 0}
+
+
+def _find_A1(k1, k2, cos_half_theta) -> Vector:
+    return {
+        'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+        'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
+
+
+def _find_D1(k1, k2, cos_half_theta) -> Vector:
+    return {
+        'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+        'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
+
+
+def _find_A2(k1, k2, cos_half_theta) -> Vector:
+    return {
+        'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+        'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
+
+
+def _find_D2(k1, k2, cos_half_theta) -> Vector:
+    return {
+        'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+        'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}
+
+
+def _find_C1(
+        k1: float,
+        k2: float,
+        n1: float,
+        n2: float,
+        t1: float,
+        t2: float,
+        r: float
+        ) -> Vector:
+    return {
+        'x': (k1**3*n1**2 - 2*k1**3*n1*t1 - k1**3*r**2 + k1**3*t1**2 + k1**2*k2*n1*n2 - k1**2*k2*n1*t2 - k1**2*k2*n2*t1 - k1**2*k2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**2*k2*t1*t2 + k1*k2**2*n1**2 - 2*k1*k2**2*n1*t1 - k1*k2**2*r**2 + k1*k2**2*t1**2 + k2**3*n1*n2 - k2**3*n1*t2 - k2**3*n2*t1 - k2**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k2**3*t1*t2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2),
+        'y': (k1**3*n1*n2 - k1**3*n1*t2 - k1**3*n2*t1 + k1**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**3*t1*t2 + k1**2*k2*n2**2 - 2*k1**2*k2*n2*t2 - k1**2*k2*r**2 + k1**2*k2*t2**2 + k1*k2**2*n1*n2 - k1*k2**2*n1*t2 - k1*k2**2*n2*t1 + k1*k2**2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1*k2**2*t1*t2 + k2**3*n2**2 - 2*k2**3*n2*t2 - k2**3*r**2 + k2**3*t2**2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2)}
+
+
+def _find_C2(
+        k1: float,
+        k2: float,
+        n1: float,
+        n2: float,
+        t1: float,
+        t2: float,
+        n: float,
+        r: float
+        ) -> Vector:
+    return {
+        'x': (k1**3*n1**2 - 2*k1**3*n1*t1 - k1**3*r**2 + k1**3*t1**2 + k1**2*k2*n1*n2 - k1**2*k2*n1*t2 - k1**2*k2*n2*t1 + k1**2*k2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**2*k2*t1*t2 + k1*k2**2*n1**2 - 2*k1*k2**2*n1*t1 - k1*k2**2*r**2 + k1*k2**2*t1**2 + k2**3*n1*n2 - k2**3*n1*t2 - k2**3*n2*t1 + k2**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k2**3*t1*t2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2),
+        'y': (k1**3*n1*n2 - k1**3*n1*t2 - k1**3*n2*t1 - k1**3*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1**3*t1*t2 + k1**2*k2*n2**2 - 2*k1**2*k2*n2*t2 - k1**2*k2*r**2 + k1**2*k2*t2**2 + k1*k2**2*n1*n2 - k1*k2**2*n1*t2 - k1*k2**2*n2*t1 - k1*k2**2*r*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + k1*k2**2*t1*t2 + k2**3*n2**2 - 2*k2**3*n2*t2 - k2**3*r**2 + k2**3*t2**2)/(k1**2*n1**2 - 2*k1**2*n1*t1 - k1**2*r**2 + k1**2*t1**2 + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1 + 2*k1*k2*t1*t2 + k2**2*n2**2 - 2*k2**2*n2*t2 - k2**2*r**2 + k2**2*t2**2)}
+
+
+def _calculate_B(cam: CamSpec, obs: Obstacle) -> Tuple[str, Vector]:
     a1: float = obs['position']['x']
     a2: float = obs['position']['y']
-    b1: float = cam['x']
-    b2: float = cam['y']
+    b1: float = cam['position']['x']
+    b2: float = cam['position']['y']
     k1: float = cam['k'] * m.cos(cam['alpha'])
     k2: float = cam['k'] * m.sin(cam['alpha'])
     r: float = obs['radius']
@@ -532,11 +605,11 @@ def _calculate_B(cam: CamSpec, obs: Obstacle) -> Tuple[str, Point]:
               / denominator)})
 
 
-def _calculate_C(cam: CamSpec, obs: Obstacle) -> Tuple[str, Point]:
+def _calculate_C(cam: CamSpec, obs: Obstacle) -> Tuple[str, Vector]:
     a1: float = obs['position']['x']
     a2: float = obs['position']['y']
-    b1: float = cam['x']
-    b2: float = cam['y']
+    b1: float = cam['position']['x']
+    b2: float = cam['position']['y']
     k1: float = cam['k'] * m.cos(cam['alpha'])
     k2: float = cam['k'] * m.sin(cam['alpha'])
     r: float = obs['radius']
@@ -572,7 +645,7 @@ def _calculate_C(cam: CamSpec, obs: Obstacle) -> Tuple[str, Point]:
         'y': A2 + b2 + k2})
 
 
-def _calculate_D(cam: CamSpec) -> Point:
+def _calculate_D(cam: CamSpec) -> Vector:
     """
     It calculates the position of the right-hand end of the camera
     lens.
@@ -582,5 +655,5 @@ def _calculate_D(cam: CamSpec) -> Point:
     a: float = p * m.cos(beta)
     b: float = p * m.sin(beta)
     return {
-        'x': cam['x'] + a,
-        'y': cam['y'] + b}
+        'x': cam['position']['x'] + a,
+        'y': cam['position']['y'] + b}

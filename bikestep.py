@@ -111,8 +111,9 @@ def _list2bikestate(L: List['float'], v, Tdelta, Tm) -> w.BikeState:
         'phidot': L[2],
         'deltadot': L[3],
         'psi': L[4],
-        'x': L[5],
-        'y': L[6],
+        'position': {
+            'x': L[5],
+            'y': L[6]},
         'v': v,
         'Tdelta': Tdelta,
         'Tm': Tm}
@@ -202,8 +203,8 @@ def _make_initial_conditions(b: w.BikeState) -> List[float]:
         b['phidot'],
         b['deltadot'],
         b['psi'],
-        b['x'],
-        b['y']]
+        b['position']['x'],
+        b['position']['y']]
 
 
 def main(b: w.BikeState, t: float) -> w.BikeState:
@@ -224,8 +225,9 @@ def main(b: w.BikeState, t: float) -> w.BikeState:
         'phidot': sol[2],
         'deltadot': sol[3],
         'psi': sol[4],
-        'x': sol[5],
-        'y': sol[6],
+        'position': {
+            'x': sol[5],
+            'y': sol[6]},
         'v': v,
         'Tdelta': b['Tdelta'],
         'Tm': b['Tm']}

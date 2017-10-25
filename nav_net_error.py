@@ -19,14 +19,14 @@ X_MATRIX, Y_MATRIX = np.meshgrid(XY_RANGE, XY_RANGE)  # type: ignore
 # free to drive over.
 class Freeness(TypedDict):
     radius: float
-    position: w.Point
+    position: w.Vector
     free_time: float
 
 
 # Defines a circle with equation of the form (x - h)² + (y - k)² = r²,
 # where (h, k) is the position of the centre and r is the radius.
 class Circle(TypedDict):
-    o: w.Point
+    o: w.Vector
     r: float
 
 
@@ -34,7 +34,7 @@ class Circle(TypedDict):
 # anticlockwise from the positive x-axis.  The reason for not using
 # y = mx + c is that this is not defined for vertical lines.
 class Line(TypedDict):
-    X: w.Point
+    X: w.Vector
     theta: float
     tan_theta: float  # gradient
 
@@ -205,7 +205,7 @@ def _mark_obstacle_path(
             _in_front_of_start(o))
 
 
-def _velocity_magnitude(v: w.Velocity) -> float:
+def _velocity_magnitude(v: w.Vector) -> float:
     return (v['x']**2 + v['y']**2)**0.5
 
 
@@ -367,7 +367,7 @@ def _mx_plus_c(L: Line) -> Tuple[str, MxPlusC]:
     return "Line is vertical so no gradient", None
 
 
-def _distance_between(a: w.Point, b: w.Point) -> float:
+def _distance_between(a: w.Vector, b: w.Vector) -> float:
     """ It calculates the distance between two points. """
     return ((a['x'] - b['x'])**2 + (a['y'] - b['y'])**2)**0.5
 

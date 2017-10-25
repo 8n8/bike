@@ -49,7 +49,7 @@ def update_velocity(key: str, v: Velocity) -> Velocity:
     return v
 
 
-def polar_velocity_to_cartesian(v: Velocity) -> w.Velocity:
+def polar_velocity_to_cartesian(v: Velocity) -> w.Vector:
     return {
         'x': v['speed'] * math.cos(v['angle']),
         'y': v['speed'] * math.sin(v['angle'])}
@@ -57,7 +57,7 @@ def polar_velocity_to_cartesian(v: Velocity) -> w.Velocity:
 
 class WorldState(TypedDict):
     velocity: Velocity
-    position: w.Point
+    position: w.Vector
     obstacles: List[w.Obstacle]
 
 
@@ -93,7 +93,7 @@ def update_world(s: WorldState, t: float) -> WorldState:
         'obstacles': u.main(s['obstacles'], t, s['position'])}
 
 
-def distance_between(a: w.Point, b: w.Point) -> float:
+def distance_between(a: w.Vector, b: w.Vector) -> float:
     return ((a['x'] - b['x'])**2 + (a['y'] - b['y'])**2)**0.5
 
 
