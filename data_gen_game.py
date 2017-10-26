@@ -8,7 +8,7 @@ import world2sensor as w
 
 
 XOFFSET: float = 300
-YOFFSET: float = 600
+YOFFSET: float = 700
 SCALE: float = 5
 
 
@@ -119,7 +119,10 @@ class World:
             'obstacles': []}
         self.canvas = canvas
         self.images = make_images(self.w)
-        self.target_v = u._random_obstacle_velocity()
+        randomv = u._random_obstacle_velocity()
+        self.target_v = {
+            'x': randomv['x']+5,
+            'y': randomv['y']+5}
 
     def update(self):
         rate = 0.05
@@ -160,11 +163,10 @@ def draw_arrow(
         v: w.Vector,
         p: w.Vector,
         colour: str):
-    print(v)
-    startx: float = XOFFSET + SCALE*(p['x'] - (v['x']))
-    starty: float = YOFFSET - SCALE*(p['y'] - (v['y']))
-    stopx: float = XOFFSET + SCALE*(p['x'] + (v['x']))
-    stopy: float = YOFFSET - SCALE*(p['y'] + (v['y']))
+    startx: float = XOFFSET + SCALE*(-v['x'])
+    starty: float = YOFFSET - SCALE*(-v['y'])
+    stopx: float = XOFFSET + SCALE*v['x']
+    stopy: float = YOFFSET - SCALE*v['y']
     canvas.create_line(startx, starty, stopx, stopy, arrow=k.LAST,
                        fill=colour, width=1)
 
@@ -191,14 +193,15 @@ def plot_obstacle(canvas, o: w.Obstacle):
 
 
 def plot_objects(canvas, w: WorldState):
-    circle(
-        canvas,
-        XOFFSET + SCALE * w['position']['x'],
-        YOFFSET - SCALE * w['position']['y'],
-        SCALE * 1.0,
-        'red')
-    [plot_obstacle(canvas, o)
-     for o in w['obstacles']]
+    circle(canvas, XOFFSET, YOFFSET, SCALE * 1.0, 'red')
+    centred_obstacles = [{
+        'position': {
+            'x': o['position']['x'] - w['position']['x'],
+            'y': o['position']['y'] - w['position']['y']},
+        'velocity': o['velocity'],
+        'radius': o['radius']}
+        for o in w['obstacles']]
+    [plot_obstacle(canvas, o) for o in centred_obstacles]
 
 
 def main():

@@ -26,14 +26,19 @@ def main(
         bike_position,
         t)
     new_obstacles: List[w.Obstacle] = _make_new_obstacles(
-        len(updated_obstacles),
+        _num_close_obstacles(bike_position, updated_obstacles),
         bike_position)
     return updated_obstacles + new_obstacles
 
 
+def _num_close_obstacles(pos: w.Vector, obs: List[w.Obstacle]) -> int:
+    return len([o for o in obs
+                if _distance_between(o['position'], pos) < 40])
+
+
 def _num_new_obstacles(current_obstacle_count: int) -> int:
     """ It decides how many new obstacles to make. """
-    diff: int = random.randint(0, 10) - current_obstacle_count
+    diff: int = random.randint(0, 20) - current_obstacle_count
     if diff < 0:
         return 0
     return diff
@@ -41,7 +46,7 @@ def _num_new_obstacles(current_obstacle_count: int) -> int:
 
 def _random_obstacle_position(bike_position: w.Vector) -> w.Vector:
     """ It randomly decides on a position for a new obstacle. """
-    distance_from_bike: float = random.uniform(10, 20)
+    distance_from_bike: float = random.uniform(30, 50)
     angle: float = random.uniform(0, 2*m.pi)
     return {
         'x': bike_position['x'] + distance_from_bike * m.cos(angle),
