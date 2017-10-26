@@ -325,13 +325,12 @@ def _calculate_ABCD_coords(
     BL: Vector = rel2cam['B']
     CL: Vector = rel2cam['C']
     DL: Vector = rel2cam['D']
-    # From the diagram in world2sensor_geometry.pdf it can be seen that
-    # the obstacle is out of sight of the camera if C x A or D x B is in
-    # the negative k-direction.
-    # CxA = CL['x']*AL['y'] - CL['y']*AL['x']
-    # DxB = DL['x']*BL['y'] - DL['y']*BL['x']
-    # if CxA < 0 or DxB < 0:
-    #     return "Obstacle is out of sight.", None
+    PL: Vector = rel2cam['P']
+    QL: Vector = rel2cam['Q']
+    BxP = BL['x']*PL['y'] - BL['y']*PL['x']
+    QxC = QL['x']*CL['y'] - QL['y']*CL['x']
+    if BxP < 0 or QxC < 0:
+        return "Obstacle is out of sight.", None
     return (None, {
         'A': vectorSum(AL, cam['position']),
         'B': vectorSum(BL, cam['position']),
@@ -432,15 +431,16 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
 
     The vectors are drawn in the diagram in world2sensor_geometry.pdf. The
     z-axis is perpendicular to the page and positive when pointing towards
-    the reader.  The required vectors are A, B, C, and D.  All the
-    variables with lower-case names are known.
+    the reader.  The unit vector pointing in the positive z-direction is
+    k.  The required vectors are A, B, C, and D.  All the variables with
+    lower-case names are known.
 
     The equations for finding A and D are:
 
-                A + D - 2k = 0      v1
+                A + D - 2K = 0      v1
 
-        cos(ϴ/2) - |k|/|A| = 0      s1
-        cos(ϴ/2) - |k|/|D| = 0      s2
+        cos(ϴ/2) - |K|/|A| = 0      s1
+        cos(ϴ/2) - |K|/|D| = 0      s2
 
     From the diagram, the unknowns needed for finding C are:
 
@@ -448,26 +448,26 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
 
     The equations are:
 
-                C - G - k = 0
+                C - G - K = 0
         n + Q - N - C - t = 0
 
-                    G . k = 0
-                    Q . N = 0
-                    Q . C = 0
+                    G . K = 0
+         Q x N / (|Q||N|) = k
+         Q x C / (|Q||C|) = k
                       |Q| = r
 
-    Let G+F = S, then the unknowns needed for finding B are:
+    Let G + F = S, then the unknowns needed for finding B are:
 
         B, S, M, P
 
     The equations are:
 
-                B - S - k = 0
+                B - S - K = 0
         n + P - M - B - t = 0
 
-                    S . k = 0
-                    P . M = 0
-                    P . B = 0
+                    S . K = 0
+         B x P / (|B||P|) = k
+         M x P / (|M||P|) = k
                       |P| = r
 
     These equations were solved using sympy, a symbolic numeric algebra
@@ -484,10 +484,24 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle):
     r = obs['radius']
     cos_half_theta = m.cos(cam['theta']/2)
     return (None, {
+        'P': _find_P(k1, k2, n1, n2, t1, t2, r),
+        'Q': _find_Q(k1, k2, n1, n2, t1, t2, r),
         'A': _find_A(k1, k2, cos_half_theta),
         'B': _find_B1(k1, k2, n1, n2, t1, t2, r),
         'C': _find_C1(k1, k2, n1, n2, t1, t2, r),
         'D': _find_D(k1, k2, cos_half_theta)})
+
+
+def _find_P(k1, k2, n1, n2, t1, t2, r):
+    return {
+        'x': r*(-n1*r - n2*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + r*t1 + t2*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2))/(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 + t1**2 + t2**2),
+        'y': -r*(r*(n2 - t2) - (n1 - t1)*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2))/(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 + t1**2 + t2**2)}
+
+
+def _find_Q(k1, k2, n1, n2, t1, t2, r):
+    return {
+        'x': r*(-n1*r + n2*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2) + r*t1 - t2*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2))/(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 + t1**2 + t2**2),
+        'y': -r*(r*(n2 - t2) + (n1 - t1)*m.sqrt(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 - r**2 + t1**2 + t2**2))/(n1**2 - 2*n1*t1 + n2**2 - 2*n2*t2 + t1**2 + t2**2)}
 
 
 def _find_A(k1: float, k2: float, cos_half_theta: float) -> Vector:

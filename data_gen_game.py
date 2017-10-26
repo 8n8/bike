@@ -1,7 +1,6 @@
 import math
 from mypy_extensions import TypedDict
 from PIL import ImageTk, Image  # type: ignore
-# from pynput import keyboard  # type: ignore
 import tkinter as k
 from typing import List
 import update_obstacle_pop as u

@@ -50,17 +50,17 @@ def bikestate3() -> w.BikeState:
 def test_bikestep1():
     i = bikestate1()
     o = b.main(i, 3.0)
-    assert i['x'] != o['x']
-    assert i['y'] != o['y']
+    assert i['position']['x'] != o['position']['x']
+    assert i['position']['y'] != o['position']['y']
 
 
 def test_bikestep2():
     i = bikestate2()
     o = b.main(i, 3.0)
-    assert o['x'] < 0.0
+    assert o['position']['x'] < 0.0
 
 
 def test_bikestep3():
     i = bikestate3()
     o = b.main(i, 1)
-    assert o['y'] > 0
+    assert o['position']['y'] > 0
