@@ -39,11 +39,11 @@ def update_velocity(key: str, v: Velocity) -> Velocity:
             'speed': speed_mod(v['speed'] - speed_step)}
     if key == 'left':
         return {
-            'angle': angle_mod(v['angle'] - angle_step),
+            'angle': angle_mod(v['angle'] + angle_step),
             'speed': v['speed']}
     if key == 'right':
         return {
-            'angle': angle_mod(v['angle'] + angle_step),
+            'angle': angle_mod(v['angle'] - angle_step),
             'speed': v['speed']}
     return v
 
@@ -121,7 +121,6 @@ class World:
         if crashed_into_obstacle(self.w):
             print('Robot has crashed into obstacle.')
             return
-        # print(self.w['velocity'])
         plot_objects(self.canvas, self.w)
         self.w = update_world(self.w, rate)
         self.images = make_images(self.w)
@@ -152,7 +151,7 @@ def plot_obstacle(canvas, o: w.Obstacle, xoffset, yoffset, scale):
     circle(
         canvas,
         scale * o['position']['x'] + xoffset,
-        scale * o['position']['y'] + yoffset,
+        - scale * o['position']['y'] + yoffset,
         scale * o['radius'],
         'black')
 
@@ -164,7 +163,7 @@ def plot_objects(canvas, w: WorldState):
     circle(
         canvas,
         xoffset + scale * w['position']['x'],
-        yoffset + scale * w['position']['y'],
+        yoffset - scale * w['position']['y'],
         scale * 1.0,
         'red')
     [plot_obstacle(canvas, o, xoffset, yoffset, scale)

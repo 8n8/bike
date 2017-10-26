@@ -268,11 +268,9 @@ def _obstacle_image_parameters(
     x and y (shown on the diagram).
     """
     err, points = _calculate_ABCD_coords(cam, obs)
-    print(points)
     if err is not None:
         return err, None
     X = _flatten_points(points)
-    print(X)
     A: float = X['A']
     B: float = X['B']
     C: float = X['C']
