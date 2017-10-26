@@ -7,6 +7,11 @@ import update_obstacle_pop as u
 import world2sensor as w
 
 
+XOFFSET: float = 300
+YOFFSET: float = 600
+SCALE: float = 5
+
+
 class Velocity(TypedDict):
     angle: float  # between 0 and 2π
     speed: float
@@ -114,6 +119,7 @@ class World:
             'obstacles': []}
         self.canvas = canvas
         self.images = make_images(self.w)
+        self.target_v = u._random_obstacle_velocity()
 
     def update(self):
         rate = 0.05
@@ -122,6 +128,8 @@ class World:
             print('Robot has crashed into obstacle.')
             return
         plot_objects(self.canvas, self.w)
+        draw_arrows(self.canvas, self.w['velocity'], self.target_v,
+                    self.w['position'])
         self.w = update_world(self.w, rate)
         self.images = make_images(self.w)
         self.canvas.create_image(320, 110, image=self.images['front'])
@@ -147,26 +155,49 @@ def circle(canvas, x, y, r, colour):
     canvas.create_oval(x - r, y - r, x + 2 * r, y + 2 * r, fill=colour)
 
 
-def plot_obstacle(canvas, o: w.Obstacle, xoffset, yoffset, scale):
+def draw_arrow(
+        canvas,
+        v: w.Vector,
+        p: w.Vector,
+        colour: str):
+    print(v)
+    startx: float = XOFFSET + SCALE*(p['x'] - (v['x']))
+    starty: float = YOFFSET - SCALE*(p['y'] - (v['y']))
+    stopx: float = XOFFSET + SCALE*(p['x'] + (v['x']))
+    stopy: float = YOFFSET - SCALE*(p['y'] + (v['y']))
+    canvas.create_line(startx, starty, stopx, stopy, arrow=k.LAST,
+                       fill=colour, width=1)
+
+
+def draw_arrows(
+        canvas,
+        actual_v: Velocity,
+        target_v: w.Vector,
+        p: w.Vector):
+    actual_v_cart: w.Vector = {
+        'x': actual_v['speed'] * math.cos(actual_v['angle']),
+        'y': actual_v['speed'] * math.sin(actual_v['angle'])}
+    draw_arrow(canvas, actual_v_cart, p, 'red')
+    draw_arrow(canvas, target_v, p, 'black')
+
+
+def plot_obstacle(canvas, o: w.Obstacle):
     circle(
         canvas,
-        scale * o['position']['x'] + xoffset,
-        - scale * o['position']['y'] + yoffset,
-        scale * o['radius'],
+        SCALE * o['position']['x'] + XOFFSET,
+        - SCALE * o['position']['y'] + YOFFSET,
+        SCALE * o['radius'],
         'black')
 
 
 def plot_objects(canvas, w: WorldState):
-    scale = 5
-    xoffset: float = 300
-    yoffset: float = 600
     circle(
         canvas,
-        xoffset + scale * w['position']['x'],
-        yoffset - scale * w['position']['y'],
-        scale * 1.0,
+        XOFFSET + SCALE * w['position']['x'],
+        YOFFSET - SCALE * w['position']['y'],
+        SCALE * 1.0,
         'red')
-    [plot_obstacle(canvas, o, xoffset, yoffset, scale)
+    [plot_obstacle(canvas, o)
      for o in w['obstacles']]
 
 
