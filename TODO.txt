@@ -1,0 +1,6 @@
++ finish data generation game
+    + add arrow
+    + add data capture
++ play data generation game to generate data
++ make program for loading generated data
++ train navigation neural net
