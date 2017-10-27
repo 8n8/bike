@@ -6,15 +6,40 @@ that are too far away.  The only function exposed is main().
 
 
 import math as m
+from mypy_extensions import TypedDict
 import random
 from typing import List
 import world2sensor as w
+
+
+class ObstacleParams(TypedDict):
+    distance: float
+    angle: float
+    speed: float
+    direction: float
+
+
+def generate_obstacle_params():
+    return {
+        'distance': random.randint(30, 50),
+        'angle': random.uniform(0, 2*m.pi),
+        'speed': random.randint(0, 5),
+        'direction': random.uniform(0, 2*m.pi)}
+
+
+def generate_params():
+    max_new: int = random.randint(0, 20)
+    obs: List[ObstacleParams] = [
+        generate_obstacle_params() for _ in range(max_new)]
+    return max_new, obs
 
 
 def main(
         obstacle_list: List[w.Obstacle],
         t: float,
         bike_position: w.Vector,
+        max_new_obstacles,
+        obstacle_params: List[ObstacleParams]
         ) -> List[w.Obstacle]:
     """
     Given the current obstacles, a time period and the current bike
@@ -27,7 +52,9 @@ def main(
         t)
     new_obstacles: List[w.Obstacle] = _make_new_obstacles(
         _num_close_obstacles(bike_position, updated_obstacles),
-        bike_position)
+        bike_position,
+        max_new_obstacles,
+        obstacle_params)
     return updated_obstacles + new_obstacles
 
 
@@ -36,51 +63,67 @@ def _num_close_obstacles(pos: w.Vector, obs: List[w.Obstacle]) -> int:
                 if _distance_between(o['position'], pos) < 40])
 
 
-def _num_new_obstacles(current_obstacle_count: int) -> int:
+def _num_new_obstacles(
+        current_obstacle_count: int,
+        max_new_obstacles: int) -> int:
     """ It decides how many new obstacles to make. """
-    diff: int = random.randint(0, 20) - current_obstacle_count
+    diff: int = max_new_obstacles - current_obstacle_count
     if diff < 0:
         return 0
     return diff
 
 
-def _random_obstacle_position(bike_position: w.Vector) -> w.Vector:
+def _random_obstacle_position(
+        bike_position: w.Vector,
+        distance: float,
+        angle: float
+        ) -> w.Vector:
     """ It randomly decides on a position for a new obstacle. """
-    distance_from_bike: float = random.uniform(30, 50)
-    angle: float = random.uniform(0, 2*m.pi)
     return {
-        'x': bike_position['x'] + distance_from_bike * m.cos(angle),
-        'y': bike_position['y'] + distance_from_bike * m.sin(angle)}
+        'x': bike_position['x'] + distance * m.cos(angle),
+        'y': bike_position['y'] + distance * m.sin(angle)}
 
 
-def _random_obstacle_velocity() -> w.Vector:
+def _random_obstacle_velocity(
+        randuni_0_5: float,
+        randuni_0_2pi: float
+        ) -> w.Vector:
     """ It randomly decides on a velocity for a new obstacle. """
-    magnitude: float = random.uniform(0, 5)
-    direction: float = random.uniform(0, 2*m.pi)
     return {
-        'x': magnitude * m.cos(direction),
-        'y': magnitude * m.sin(direction)}
+        'x': randuni_0_5 * m.cos(randuni_0_2pi),
+        'y': randuni_0_5 * m.sin(randuni_0_2pi)}
 
 
-def _new_random_obstacle(bike_position: w.Vector) -> w.Obstacle:
+def _new_random_obstacle(
+        bike_position: w.Vector,
+        p: ObstacleParams
+        ) -> w.Obstacle:
     """ It randomly creates a new obstacle. """
     return {
-        'position': _random_obstacle_position(bike_position),
-        'velocity': _random_obstacle_velocity(),
+        'position': _random_obstacle_position(
+            bike_position,
+            p['distance'],
+            p['angle']),
+        'velocity': _random_obstacle_velocity(
+            p['speed'],
+            p['direction']),
         'radius': 0.5}
 
 
 def _make_new_obstacles(
         num_obstacles: int,
         bike_position: w.Vector,
+        max_new_obstacles: int,
+        obstacle_params: List[ObstacleParams]
         ) -> List[w.Obstacle]:
     """
     It creates a random number of new obstacles, taking into account
     the number of existing obstacles and the position of the bicycle.
     """
-    num_new: int = _num_new_obstacles(num_obstacles)
+    num_new: int = _num_new_obstacles(num_obstacles, max_new_obstacles)
     return [
-        _new_random_obstacle(bike_position) for _ in range(num_new)]
+        _new_random_obstacle(bike_position, params)
+        for _, params in zip(range(num_new), obstacle_params)]
 
 
 def _update_current_obstacles(

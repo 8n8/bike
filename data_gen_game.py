@@ -1,20 +1,34 @@
+import json
 import math
 from mypy_extensions import TypedDict
 from PIL import ImageTk, Image  # type: ignore
+import random
 import tkinter as k
 from typing import List
 import update_obstacle_pop as u
+import uuid
 import world2sensor as w
 
 
-XOFFSET: float = 300
-YOFFSET: float = 700
+XOFFSET: float = 330
+YOFFSET: float = 800
 SCALE: float = 8
 
 
 class Velocity(TypedDict):
     angle: float  # between 0 and 2π
     speed: float
+
+
+class WorldState(TypedDict):
+    velocity: Velocity
+    position: w.Vector
+    obstacles: List[w.Obstacle]
+
+
+class DataPoint(TypedDict):
+    world: WorldState
+    target_velocity: Velocity
 
 
 def angle_mod(angle: float) -> float:
@@ -62,16 +76,10 @@ def polar_velocity_to_cartesian(v: Velocity) -> w.Vector:
         'y': v['speed'] * math.sin(v['angle'])}
 
 
-class WorldState(TypedDict):
-    velocity: Velocity
-    position: w.Vector
-    obstacles: List[w.Obstacle]
-
-
 def numpy_to_TKimage(i: w.ImageSet):
     """
     It converts a set of four camera images from the four cameras from
-    m x n x 3 numpy arrays to the right format for displaying in 
+    m x n x 3 numpy arrays to the right format for displaying in
     Tkinter.
     """
     def f(im):
@@ -96,7 +104,12 @@ def make_images(s: WorldState):
         s['velocity']['angle']))
 
 
-def update_world(s: WorldState, t: float) -> WorldState:
+def update_world(
+        s: WorldState,
+        t: float,
+        obstacle_params: List[u.ObstacleParams],
+        max_new_obstacles: int
+        ) -> WorldState:
     """
     It calculates the next state of the world, given the previous one and
     a time interval.
@@ -110,7 +123,12 @@ def update_world(s: WorldState, t: float) -> WorldState:
         'position': {
             'x': s['position']['x'] + t * velx,
             'y': s['position']['y'] + t * vely},
-        'obstacles': u.main(s['obstacles'], t, s['position'])}
+        'obstacles': u.main(
+            s['obstacles'],
+            t,
+            s['position'],
+            max_new_obstacles,
+            obstacle_params)}
 
 
 def distance_between(a: w.Vector, b: w.Vector) -> float:
@@ -136,21 +154,28 @@ class World:
             'obstacles': []}
         self.canvas = canvas
         self.images = make_images(self.w)
-        randomv = u._random_obstacle_velocity()
         self.target_v = {
-            'x': randomv['x'] + 5,
-            'y': randomv['y'] + 5}
+            'x': - random.uniform(0,10),
+            'y': 0}
+        self.data = []
 
     def update(self):
-        rate = 0.05
+        dat = json.dumps({'world': self.w, 'target_v': self.target_v})
+        self.data.append(dat)
+        rate = 0.09
         self.canvas.delete('all')
         if crashed_into_obstacle(self.w):
             print('Robot has crashed into obstacle.')
+            filename = 'game_data/' + str(uuid.uuid4())
+            with open(filename, 'a') as f:
+                json.dump(self.data, f)
             return
         plot_objects(self.canvas, self.w)
         draw_arrows(self.canvas, self.w['velocity'], self.target_v,
                     self.w['position'])
-        self.w = update_world(self.w, rate)
+        max_new_obstacles, obstacle_params = u.generate_params()
+        self.w = update_world(
+            self.w, rate, obstacle_params, max_new_obstacles)
         self.images = make_images(self.w)
         self.canvas.create_image(320, 110, image=self.images['front'])
         self.canvas.create_image(320, 330, image=self.images['back'])
