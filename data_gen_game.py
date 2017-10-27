@@ -18,12 +18,14 @@ class Velocity(TypedDict):
 
 
 def angle_mod(angle: float) -> float:
+    """ It makes sure the angle is between 0 and 2π. """
     if angle < 0:
         return angle_mod(angle + 2 * math.pi)
     return angle % (2 * math.pi)
 
 
 def speed_mod(speed: float) -> float:
+    """ It makes sure the speed stays in the interval (-10, 10). """
     if speed > 10:
         return 10
     if speed < -10:
@@ -32,6 +34,7 @@ def speed_mod(speed: float) -> float:
 
 
 def update_velocity(key: str, v: Velocity) -> Velocity:
+    """ It changes the velocity in response to a key press. """
     speed_step = 0.4
     angle_step = math.pi/36
     if key == 'up':
@@ -66,6 +69,11 @@ class WorldState(TypedDict):
 
 
 def numpy_to_TKimage(i: w.ImageSet):
+    """
+    It converts a set of four camera images from the four cameras from
+    m x n x 3 numpy arrays to the right format for displaying in 
+    Tkinter.
+    """
     def f(im):
         return ImageTk.PhotoImage(
             Image.fromarray(im).resize((200, 200), Image.ANTIALIAS))
@@ -77,6 +85,10 @@ def numpy_to_TKimage(i: w.ImageSet):
 
 
 def make_images(s: WorldState):
+    """
+    It calculates the images from the worldstate and converts them into
+    the correct format for displaying in a Tkinter window.
+    """
     return numpy_to_TKimage(w._calculate_images(
         s['obstacles'],
         s['position']['x'],
@@ -85,6 +97,10 @@ def make_images(s: WorldState):
 
 
 def update_world(s: WorldState, t: float) -> WorldState:
+    """
+    It calculates the next state of the world, given the previous one and
+    a time interval.
+    """
     # cos(ϴ) = x / mag
     #      x = mag * cos(ϴ)
     velx = s['velocity']['speed'] * math.cos(s['velocity']['angle'])
@@ -102,6 +118,7 @@ def distance_between(a: w.Vector, b: w.Vector) -> float:
 
 
 def crashed_into_obstacle(w: WorldState) -> bool:
+    """ It works out if the robot has crashed into an obstacle. """
     return any([
         distance_between(w['position'], o['position']) < 2
         for o in w['obstacles']])
@@ -121,8 +138,8 @@ class World:
         self.images = make_images(self.w)
         randomv = u._random_obstacle_velocity()
         self.target_v = {
-            'x': randomv['x']+5,
-            'y': randomv['y']+5}
+            'x': randomv['x'] + 5,
+            'y': randomv['y'] + 5}
 
     def update(self):
         rate = 0.05
