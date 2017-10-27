@@ -9,7 +9,7 @@ import world2sensor as w
 
 XOFFSET: float = 300
 YOFFSET: float = 700
-SCALE: float = 5
+SCALE: float = 8
 
 
 class Velocity(TypedDict):
@@ -32,7 +32,7 @@ def speed_mod(speed: float) -> float:
 
 
 def update_velocity(key: str, v: Velocity) -> Velocity:
-    speed_step = 0.2
+    speed_step = 0.4
     angle_step = math.pi/36
     if key == 'up':
         return {
@@ -155,7 +155,7 @@ class World:
 
 
 def circle(canvas, x, y, r, colour):
-    canvas.create_oval(x - r, y - r, x + 2 * r, y + 2 * r, fill=colour)
+    canvas.create_oval(x - r, y - r, x + r, y + r, fill=colour)
 
 
 def draw_arrow(
@@ -176,11 +176,34 @@ def draw_arrows(
         actual_v: Velocity,
         target_v: w.Vector,
         p: w.Vector):
+    # The rotation matrix is:
+    #
+    #     [ cos ϴ   - sin ϴ ]
+    #     [ sin ϴ   cos ϴ   ]
+    #
+    # So the rotated position is:
+    #
+    #    [ x cos ϴ - y sin ϴ ]
+    #    [ x sin ϴ + y cos ϴ ]
+    theta = actual_v['angle'] + math.pi/2
+    sintheta = math.sin(-theta)
+    costheta = math.cos(-theta)
+    x = target_v['x']
+    y = target_v['y']
+    rotated: w.Vector = {
+        'x': x * costheta - y * sintheta,
+        'y': x * sintheta + y * costheta}
     actual_v_cart: w.Vector = {
-        'x': actual_v['speed'] * math.cos(actual_v['angle']),
-        'y': actual_v['speed'] * math.sin(actual_v['angle'])}
+        'x': 0,
+        'y': actual_v['speed']}
     draw_arrow(canvas, actual_v_cart, p, 'red')
-    draw_arrow(canvas, target_v, p, 'black')
+    draw_arrow(canvas, rotated, p, 'black')
+
+
+def subtract_vector(a: w.Vector, b: w.Vector) -> w.Vector:
+    return {
+        'x': a['x'] - b['x'],
+        'y': a['y'] - b['y']}
 
 
 def plot_obstacle(canvas, o: w.Obstacle):
@@ -192,15 +215,41 @@ def plot_obstacle(canvas, o: w.Obstacle):
         'black')
 
 
-def plot_objects(canvas, w: WorldState):
-    circle(canvas, XOFFSET, YOFFSET, SCALE * 1.0, 'red')
-    centred_obstacles = [{
-        'position': {
-            'x': o['position']['x'] - w['position']['x'],
-            'y': o['position']['y'] - w['position']['y']},
+def update_obstacle(
+        o: w.Obstacle,
+        bikepos: w.Vector,
+        bikevel: Velocity
+        ) -> w.Obstacle:
+    shifted: w.Vector = {
+        'x': o['position']['x'] - bikepos['x'],
+        'y': o['position']['y'] - bikepos['y']}
+    # The rotation matrix is:
+    #
+    #     [ cos ϴ   - sin ϴ ]
+    #     [ sin ϴ   cos ϴ   ]
+    #
+    # So the rotated position is:
+    #
+    #    [ x cos ϴ - y sin ϴ ]
+    #    [ x sin ϴ + y cos ϴ ]
+    theta = bikevel['angle'] - math.pi/2
+    sintheta = math.sin(-theta)
+    costheta = math.cos(-theta)
+    x = shifted['x']
+    y = shifted['y']
+    rotated: w.Vector = {
+        'x': x * costheta - y * sintheta,
+        'y': x * sintheta + y * costheta}
+    return {
+        'position': rotated,
         'velocity': o['velocity'],
         'radius': o['radius']}
-        for o in w['obstacles']]
+
+
+def plot_objects(canvas, s: WorldState):
+    circle(canvas, XOFFSET, YOFFSET, SCALE * 1.0, 'red')
+    centred_obstacles = [update_obstacle(o, s['position'], s['velocity'])
+                         for o in s['obstacles']]
     [plot_obstacle(canvas, o) for o in centred_obstacles]
 
 

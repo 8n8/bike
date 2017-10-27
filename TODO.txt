@@ -1,5 +1,5 @@
 + finish data generation game
-    + add arrow
+    + centre on robot
     + add data capture
 + play data generation game to generate data
 + make program for loading generated data
