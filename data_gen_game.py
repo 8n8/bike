@@ -3,6 +3,7 @@ import math
 from mypy_extensions import TypedDict
 from PIL import ImageTk, Image  # type: ignore
 import random
+import time
 import tkinter as k
 from typing import List
 import update_obstacle_pop as u
@@ -29,6 +30,7 @@ class WorldState(TypedDict):
 class DataPoint(TypedDict):
     world: WorldState
     target_velocity: Velocity
+    timestamp: float
 
 
 def angle_mod(angle: float) -> float:
@@ -143,7 +145,7 @@ def crashed_into_obstacle(w: WorldState) -> bool:
 
 
 class World:
-    def __init__(self, canvas):
+    def __init__(self, canvas, root):
         self.w = {
             'velocity': {
                 'angle': 0,
@@ -155,23 +157,25 @@ class World:
         self.canvas = canvas
         self.images = make_images(self.w)
         self.target_v = {
-            'x': - random.uniform(0,10),
-            'y': 0}
+            'speed': - random.uniform(0, 10),
+            'angle': math.pi/2}
         self.data = []
+        self.root = root
 
     def update(self):
-        dat = json.dumps({'world': self.w, 'target_v': self.target_v})
-        self.data.append(dat)
-        rate = 0.09
+        datapoint: DataPoint = {
+            'world': self.w,
+            'target_velocity': self.target_v,
+            'timestamp': time.time()}
+        self.data.append(datapoint)
+        rate = 0.05
         self.canvas.delete('all')
         if crashed_into_obstacle(self.w):
             print('Robot has crashed into obstacle.')
-            filename = 'game_data/' + str(uuid.uuid4())
-            with open(filename, 'a') as f:
-                json.dump(self.data, f)
             return
         plot_objects(self.canvas, self.w)
-        draw_arrows(self.canvas, self.w['velocity'], self.target_v,
+        cart_target_v = {'x': self.target_v['speed'], 'y': 0}
+        draw_arrows(self.canvas, self.w['velocity'], cart_target_v,
                     self.w['position'])
         max_new_obstacles, obstacle_params = u.generate_params()
         self.w = update_world(
@@ -194,6 +198,12 @@ class World:
 
     def velocity_right(self, _):
         self.w['velocity'] = update_velocity('right', self.w['velocity'])
+
+
+def save(data):
+    filename = 'game_data/' + str(uuid.uuid4())
+    with open(filename, 'a') as f:
+        json.dump(data, f)
 
 
 def circle(canvas, x, y, r, colour):
@@ -302,16 +312,18 @@ def main():
     canvas = k.Canvas(root, width=650, height=1000, bg='grey')
     canvas.pack()
 
-    world = World(canvas)
+    world = World(canvas, root)
+
+    def exit(_):
+        save(world.data)
+        root.destroy()
 
     root.bind("<Up>", world.increase_velocity)
     root.bind("<Down>", world.decrease_velocity)
     root.bind("<Left>", world.velocity_left)
     root.bind("<Right>", world.velocity_right)
+    root.bind("x", exit)
 
     world.update()
 
     root.mainloop()
-
-
-main()

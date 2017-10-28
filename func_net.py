@@ -79,14 +79,14 @@ def velnet():
     return k.models.Model(inputs=[imin, velin], outputs=[dense])
 
 
-iin = np.random.rand(1, 200, 200, 5, 3)  # type: ignore
-vin = np.random.rand(1, 2)  # type: ignore
+def main():
+    iin = np.random.rand(1, 200, 200, 5, 3)  # type: ignore
+    vin = np.random.rand(1, 2)  # type: ignore
 
-
-start = time.time()
-num = 100
-model = velnet()
-model.summary()
-for _ in range(num):
-    model.predict({'image_in': iin, 'velocity_in': vin})
-print((time.time() - start) / num)
+    start = time.time()
+    num = 100
+    model = velnet()
+    model.summary()
+    for _ in range(num):
+        model.predict({'image_in': iin, 'velocity_in': vin})
+    print((time.time() - start) / num)

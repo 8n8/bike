@@ -1,7 +1,9 @@
 """
 It maintains the population of obstacles in the world, keeping a
 reasonable number moving around near the bicycle and deleting ones
-that are too far away.  The only function exposed is main().
+that are too far away.  The only functions exposed are main and the
+function for generating the random parameters.  main is referentially
+transparent.
 """
 
 
@@ -19,7 +21,7 @@ class ObstacleParams(TypedDict):
     direction: float
 
 
-def generate_obstacle_params():
+def _generate_obstacle_params():
     return {
         'distance': random.randint(30, 50),
         'angle': random.uniform(0, 2*m.pi),
@@ -30,7 +32,7 @@ def generate_obstacle_params():
 def generate_params():
     max_new: int = random.randint(0, 20)
     obs: List[ObstacleParams] = [
-        generate_obstacle_params() for _ in range(max_new)]
+        _generate_obstacle_params() for _ in range(max_new)]
     return max_new, obs
 
 
@@ -166,4 +168,4 @@ def _obstacle_near_to_bike(
         obstacle: w.Obstacle
         ) -> bool:
     """ It decides if the obstacle is near to the bicycle or not. """
-    return _distance_between(bike_position, obstacle['position']) < 150
+    return _distance_between(bike_position, obstacle['position']) < 60
