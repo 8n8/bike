@@ -6,11 +6,12 @@ import math
 from mypy_extensions import TypedDict
 import numpy as np
 import os
-from typing import List, Tuple
+from typing import List, Set, Tuple
 import world2sensor as w
 
 
 def read_data_file(filepath: str) -> List[g.DataPoint]:
+    """ The data file is json format. """
     with open(filepath, 'r') as f:
         return json.load(f)
 
@@ -19,10 +20,17 @@ def read_data_batch(
         used_data_files: List[str],
         data_file_names: List[str]
         ) -> Tuple[str, List[str], List[g.DataPoint]]:
-    if set(data_file_names) == set(used_data_files):
+    """
+    It reads in a batch of data from file for training the network.
+    It stops if the data runs out or if the number of data points
+    is large.
+    """
+    setunused: Set[str] = set(data_file_names)
+    setused: Set[str] = set(used_data_files)
+    if setunused == setused:
         return "Data used up.", used_data_files, None
     gathered_data: List[g.DataPoint] = []
-    for filename in list(set(data_file_names) - set(used_data_files)):
+    for filename in setunused - setused:
         if len(gathered_data) > 100:
             break
         used_data_files.append(filename)
@@ -31,6 +39,10 @@ def read_data_batch(
 
 
 def _image_dict2np(i: w.ImageSet) -> 'np.ndarray[np.uint8]':
+    """
+    It converts the dictionary containing the camera images into a
+    single numpy array.
+    """
     top_plus_right = np.concatenate(  # type: ignore
         [i['front'], i['right']], axis=0)
     left_plus_bottom = np.concatenate(  # type: ignore
@@ -39,7 +51,14 @@ def _image_dict2np(i: w.ImageSet) -> 'np.ndarray[np.uint8]':
                            left_plus_bottom], axis=1)
 
 
-def i_for_n_seconds_ago(timestamps, n, now):
+def i_for_n_seconds_ago(
+        timestamps: List[float],
+        n: float,
+        now: float) -> int:
+    """
+    It finds the index of the timestamp that is close to being n
+    seconds ago.
+    """
     available: List[bool] = [isclose(t, now - n) for t in timestamps]
     for i, val in enumerate(available):
         if val:
@@ -56,13 +75,18 @@ def make_batch(
         timestamps: List[float],
         i: int
         ) -> Tuple[str, 'np.ndarray[np.uint8]']:
-    now = timestamps[i]
-    times = [8.1, 2.7, 0.9, 0.3, 0.1]
-    i_s = [i_for_n_seconds_ago(timestamps, t, now) for t in times]
-    nones = [i is None for i in i_s]
+    """
+    It makes a single data point for the neural network.  The 
+    network takes in 5 images going back in time between 0.1 
+    and 8.1 seconds.
+    """
+    now: float = timestamps[i]
+    times: List[float] = [8.1, 2.7, 0.9, 0.3, 0.1]
+    i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now) for t in times]
+    nones: List[bool] = [i is None for i in i_s]
     if any(nones):
-        return "Not enough history yet to make a batch.", None
-    batch = [ims[i] for i in i_s]
+        return "Not possible to make this batch.", None
+    batch: List['np.ndarray[np.uint8]'] = [ims[i] for i in i_s]
     return None, np.stack(batch, axis=2)  # type: ignore
 
 
@@ -73,12 +97,23 @@ class TrainingData(TypedDict):
 
 
 def velocity2array(v: g.Velocity) -> 'np.ndarray[np.float64]':
+    """
+    It converts velocity into a numpy array and normalises it into
+    the range [0, 1] so it can be compared with the neural net output.
+    """
     return np.array([(v['speed']+10)/20, v['angle']/(2*math.pi)])
+
+
+IndexErrImage = List[Tuple[int, Tuple[str, 'np.ndarray[np.uint8]']]]
 
 
 def convert_data(
         data_batch: List[g.DataPoint]
         ) -> Tuple[str, TrainingData]:
+    """
+    It converts the data from the game format into numpy arrays 
+    ready for feeding into the neural network.
+    """
     def worldstate2images(s: g.WorldState) -> 'np.ndarray[np.uint8]':
         return _image_dict2np(w._calculate_images(
             s['obstacles'],
@@ -93,12 +128,14 @@ def convert_data(
         velocity2array(i['target_velocity']) for i in data_batch]
     timestamps: List[float] = [i['timestamp'] for i in data_batch]
     numpoints: int = len(timestamps)
-    imbatches_with_errors_and_indices = [
+    imbatches_with_errors_and_indices: IndexErrImage = [
         (i, make_batch(ims, timestamps, i)) for i in range(numpoints)]
-    i_s = {i for i, (err, _) in imbatches_with_errors_and_indices
-           if err is None}
-    vs_used = [v for i, v in enumerate(vs) if i in i_s]
-    target_vs_used = [t for i, t in enumerate(target_vs) if i in i_s]
+    i_s: Set[int] = {i for i, (err, _) in imbatches_with_errors_and_indices
+                     if err is None}
+    vs_used: List['np.ndarray[np.float64]'] = [
+        v for i, v in enumerate(vs) if i in i_s]
+    target_vs_used: List['np.ndarray[np.float64]'] = [
+        t for i, t in enumerate(target_vs) if i in i_s]
     imbatches: List['np.ndarray[np.uint8]'] = [
         i for _, (err, i) in imbatches_with_errors_and_indices
         if err is None]
@@ -116,14 +153,17 @@ def convert_data(
 
 
 def main():
+    """
+    It trains the neural network using the game data.  
+    """
     data_file_names: List[str] = os.listdir('game_data')
-    savenetfile = 'nav_net.h5'
-    usedfilelistfile = 'used_files'
+    savenetfile: str = 'nav_net.h5'
+    usedfilelistfile: str = 'used_files'
     if os.path.isfile(usedfilelistfile):
         with open(usedfilelistfile, 'r') as fff:
-            used_data_files = json.load(fff)
+            used_data_files: List[str] = json.load(fff)
     else:
-        used_data_files = []
+        used_data_files: List[str] = []
     if os.path.isfile(savenetfile):
         model = load_model(savenetfile)
     else:
@@ -132,7 +172,7 @@ def main():
             loss='mean_squared_error',
             optimizer='adam',
             metrics=['accuracy'])
-    training_cycle_num = 0
+    training_cycle_num: int = 0
     while True:
         print('Reading data from files...')
         err, used_data_files, data_batch = read_data_batch(
