@@ -19,22 +19,14 @@ def read_data_batch(
         used_data_files: List[str],
         data_file_names: List[str]
         ) -> Tuple[str, List[str], List[g.DataPoint]]:
+    if set(data_file_names) == set(used_data_files):
+        return "Data used up.", used_data_files, None
     gathered_data: List[g.DataPoint] = []
-    i: int = 0
     for filename in list(set(data_file_names) - set(used_data_files)):
-        if  len(gathered_data) > 100:
+        if len(gathered_data) > 100:
             break
-        if set(used_data_files) == set(data_file_names):
-            print("Data used up.")
-            return "Data used up.", [], None
-        i += 1
-        filename: str = data_file_names[i]
-        filepath: str = 'game_data/' + filename
-        if filename in used_data_files:
-            continue
         used_data_files.append(filename)
-        dat = read_data_file(filepath)
-        gathered_data += dat
+        gathered_data += read_data_file('game_data/' + filename)
     return None, used_data_files, gathered_data
 
 
@@ -110,8 +102,6 @@ def convert_data(
     imbatches: List['np.ndarray[np.uint8]'] = [
         i for _, (err, i) in imbatches_with_errors_and_indices
         if err is None]
-    # im_no_nones: List['np.ndarray[np.uint8]'] = [
-    #     i for i in imbatches if i is not None]
     if imbatches == []:
         return "No useful data in batch.", None
     image_in: 'np.ndarray[np.uint8]' = (
@@ -143,18 +133,19 @@ def main():
             optimizer='adam',
             metrics=['accuracy'])
     training_cycle_num = 0
-    for i in range(1000):
-        print('Reading data from files.')
+    while True:
+        print('Reading data from files...')
         err, used_data_files, data_batch = read_data_batch(
             used_data_files, data_file_names)
         if err is not None:
+            print(err)
             model.save(savenetfile)
             if used_data_files == []:
                 return
             with open(usedfilelistfile, 'w') as ff:
                 json.dump(used_data_files, ff)
             return
-        print('Converting data.')
+        print('Converting data...')
         err, d = convert_data(data_batch)
         if err is not None:
             continue
