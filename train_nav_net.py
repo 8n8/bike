@@ -10,27 +10,30 @@ from typing import List, Tuple
 import world2sensor as w
 
 
+def read_data_file(filepath: str) -> List[g.DataPoint]:
+    with open(filepath, 'r') as f:
+        return json.load(f)
+
+
 def read_data_batch(
         used_data_files: List[str],
         data_file_names: List[str]
         ) -> Tuple[str, List[str], List[g.DataPoint]]:
     gathered_data: List[g.DataPoint] = []
     i: int = 0
-    print(used_data_files)
-    while (len(gathered_data) < 100
-            and len(gathered_data) < len(data_file_names)):
+    for filename in list(set(data_file_names) - set(used_data_files)):
+        if  len(gathered_data) > 100:
+            break
         if set(used_data_files) == set(data_file_names):
             print("Data used up.")
             return "Data used up.", [], None
         i += 1
         filename: str = data_file_names[i]
-        print(filename)
         filepath: str = 'game_data/' + filename
         if filename in used_data_files:
             continue
         used_data_files.append(filename)
-        with open(filepath, 'r') as f:
-            dat: List[g.DataPoint] = json.load(f)
+        dat = read_data_file(filepath)
         gathered_data += dat
     return None, used_data_files, gathered_data
 
@@ -149,7 +152,6 @@ def main():
             if used_data_files == []:
                 return
             with open(usedfilelistfile, 'w') as ff:
-                print(used_data_files)
                 json.dump(used_data_files, ff)
             return
         print('Converting data.')
@@ -164,7 +166,6 @@ def main():
             batch_size=10,
             epochs=1)
         with open(usedfilelistfile, 'w') as ff:
-            print(used_data_files)
             json.dump(used_data_files, ff)
         model.save(savenetfile)
 
