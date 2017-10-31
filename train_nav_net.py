@@ -7,7 +7,7 @@ import math
 from mypy_extensions import TypedDict
 import numpy as np
 import os
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple  # noqa: F401
 import world2sensor as w
 
 

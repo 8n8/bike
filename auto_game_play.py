@@ -1,11 +1,13 @@
 import json
+from keras.models import load_model  # type: ignore
 import math
 from mypy_extensions import TypedDict
 from PIL import ImageTk, Image  # type: ignore
 import random
 import time
 import tkinter as k
-from typing import List
+import train_nav_net as tr
+from typing import List, Tuple
 import update_obstacle_pop as u
 import uuid
 import world2sensor as w
@@ -51,7 +53,7 @@ def speed_mod(speed: float) -> float:
 
 def update_velocity(key: str, v: Velocity) -> Velocity:
     """ It changes the velocity in response to a key press. """
-    speed_step = 0.7 
+    speed_step = 0.7
     angle_step = math.pi/26
     if key == 'up':
         return {
@@ -144,6 +146,38 @@ def crashed_into_obstacle(w: WorldState) -> bool:
         for o in w['obstacles']])
 
 
+def chop_data(ds: List[DataPoint]) -> List[DataPoint]:
+    tnew: float = ds[-1]['timestamp']
+    needed: List[DataPoint] = [tnew - d['timestamp'] < 9 for d in ds]
+    return [d for d, good in zip(ds, needed) if good]
+
+
+def pad_data(ds: List[DataPoint]) -> List[DataPoint]:
+    newest: float = ds[-1]['timestamp']
+    oldest: float = ds[0]['timestamp']
+    if oldest - newest > 9:
+        return
+    extra_needed: float = 9 - oldest + newest
+    extra_timestamps: List[float] = [
+        oldest + 0.1 * i for i in range(int(extra_needed/0.1))]
+    return [{
+        'world': {
+            'velocity': {
+                'angle': ds[0]['world']['velocity']['angle'],
+                'speed': 0},
+            'position': ds[0]['world']['position'],
+            'obstacles': []},
+        'target_velocity': ds[0]['target_velocity'],
+        'timestamp': t} for t in extra_timestamps]
+
+
+def prepare_data(ds: List[DataPoint]) -> Tuple[str, List[DataPoint]]:
+    err, result = tr.convert_data(pad_data(chop_data(ds)))
+    if err is not None:
+        return err, None
+    return None, result
+
+
 class World:
     def __init__(self, canvas, root):
         self.w = {
@@ -161,6 +195,7 @@ class World:
             'angle': math.pi/2}
         self.data = []
         self.root = root
+        self.model = load_model('nav_net1.h5')
 
     def update(self):
         datapoint: DataPoint = {
@@ -186,6 +221,15 @@ class World:
         self.canvas.create_image(110, 220, image=self.images['left'])
         self.canvas.create_image(530, 220, image=self.images['right'])
         self.canvas.after(int(1/rate), self.update)
+
+    def calculate_velocity(self, _):
+        self.data = prepare_data(self.data)
+        dat = tr.convert_data(self.data)
+        npvel = self.model.predict(
+            {'image_in': dat['image_in'],
+             'velocity_in': dat['v_in']})
+        self.w['velocity']['speed'] = (npvel[0] * 20) - 10
+        self.w['velocity']['angle'] = npvel[1] * 2 * math.pi
 
     def increase_velocity(self, _):
         self.w['velocity'] = update_velocity('up', self.w['velocity'])
@@ -314,14 +358,14 @@ def main():
 
     world = World(canvas, root)
 
-    def exit(_):
-        save(world.data)
+    # def exit(_):
+    #     save(world.data)
 
-    root.bind("<Up>", world.increase_velocity)
-    root.bind("<Down>", world.decrease_velocity)
-    root.bind("<Left>", world.velocity_left)
-    root.bind("<Right>", world.velocity_right)
-    root.bind("x", exit)
+    # root.bind("<Up>", world.increase_velocity)
+    # root.bind("<Down>", world.decrease_velocity)
+    # root.bind("<Left>", world.velocity_left)
+    # root.bind("<Right>", world.velocity_right)
+    # root.bind("x", exit)
 
     world.update()
 
