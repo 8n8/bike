@@ -51,8 +51,8 @@ def speed_mod(speed: float) -> float:
 
 def update_velocity(key: str, v: Velocity) -> Velocity:
     """ It changes the velocity in response to a key press. """
-    speed_step = 0.4
-    angle_step = math.pi/36
+    speed_step = 0.7 
+    angle_step = math.pi/26
     if key == 'up':
         return {
             'angle': v['angle'],
@@ -168,7 +168,7 @@ class World:
             'target_velocity': self.target_v,
             'timestamp': time.time()}
         self.data.append(datapoint)
-        rate = 0.05
+        rate = 0.04
         self.canvas.delete('all')
         if crashed_into_obstacle(self.w):
             print('Robot has crashed into obstacle.')
@@ -316,7 +316,6 @@ def main():
 
     def exit(_):
         save(world.data)
-        root.destroy()
 
     root.bind("<Up>", world.increase_velocity)
     root.bind("<Down>", world.decrease_velocity)

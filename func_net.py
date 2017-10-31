@@ -63,9 +63,15 @@ conv7 = k.layers.convolutional.Conv3D(
 
 flat = k.layers.core.Flatten()
 
+norm1 = k.layers.BatchNormalization()
+
 dense1 = k.layers.Dense(50, activation='relu')
 
+norm2 = k.layers.BatchNormalization()
+
 dense2 = k.layers.Dense(25, activation='relu')
+
+norm3 = k.layers.BatchNormalization()
 
 dense3 = k.layers.Dense(2, activation='softmax')
 
@@ -75,7 +81,7 @@ def velnet():
     velin = k.layers.Input(shape=(2,), name='velocity_in')
     conv = flat(conv7(conv6(conv5(conv4(conv3(conv2(conv1(imin))))))))
     midin = k.layers.concatenate([conv, velin])
-    dense = dense3(dense2(dense1(midin)))
+    dense = dense3(norm3(dense2(norm2(dense1(norm1(midin))))))
     return k.models.Model(inputs=[imin, velin], outputs=[dense])
 
 

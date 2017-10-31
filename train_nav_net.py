@@ -1,6 +1,7 @@
 import data_gen_game as g
 import func_net as f
 import json
+from keras.optimizers import Adam  # type: ignore
 from keras.models import load_model  # type: ignore
 import math
 from mypy_extensions import TypedDict
@@ -76,8 +77,8 @@ def make_batch(
         i: int
         ) -> Tuple[str, 'np.ndarray[np.uint8]']:
     """
-    It makes a single data point for the neural network.  The 
-    network takes in 5 images going back in time between 0.1 
+    It makes a single data point for the neural network.  The
+    network takes in 5 images going back in time between 0.1
     and 8.1 seconds.
     """
     now: float = timestamps[i]
@@ -111,7 +112,7 @@ def convert_data(
         data_batch: List[g.DataPoint]
         ) -> Tuple[str, TrainingData]:
     """
-    It converts the data from the game format into numpy arrays 
+    It converts the data from the game format into numpy arrays
     ready for feeding into the neural network.
     """
     def worldstate2images(s: g.WorldState) -> 'np.ndarray[np.uint8]':
@@ -154,7 +155,7 @@ def convert_data(
 
 def main():
     """
-    It trains the neural network using the game data.  
+    It trains the neural network using the game data.
     """
     data_file_names: List[str] = os.listdir('game_data')
     savenetfile: str = 'nav_net.h5'
@@ -169,8 +170,8 @@ def main():
     else:
         model = f.velnet()
         model.compile(
-            loss='mean_squared_error',
-            optimizer='adam',
+            loss='categorical_crossentropy',
+            optimizer=Adam(lr=0.001, decay=1e-7),
             metrics=['accuracy'])
     training_cycle_num: int = 0
     while True:
