@@ -3,6 +3,9 @@ import numpy as np
 import time
 
 
+norm0 = k.layers.BatchNormalization()
+
+
 conv1 = k.layers.convolutional.Conv3D(
     5,
     3,
@@ -79,7 +82,8 @@ dense3 = k.layers.Dense(2, activation='softmax')
 def velnet():
     imin = k.layers.Input(shape=(200, 200, 5, 3), name='image_in')
     velin = k.layers.Input(shape=(2,), name='velocity_in')
-    conv = flat(conv7(conv6(conv5(conv4(conv3(conv2(conv1(imin))))))))
+    conv = flat(conv7(conv6(conv5(conv4(conv3(conv2(conv1(norm0(
+        imin)))))))))
     midin = k.layers.concatenate([conv, velin])
     dense = dense3(norm3(dense2(norm2(dense1(norm1(midin))))))
     return k.models.Model(inputs=[imin, velin], outputs=[dense])
