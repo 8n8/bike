@@ -171,7 +171,7 @@ def main():
         model = f.velnet()
         model.compile(
             loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.0002, decay=1e-7),
+            optimizer=Adam(lr=0.00004, decay=1e-6),
             metrics=['accuracy'])
     training_cycle_num: int = 0
     while True:
