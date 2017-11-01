@@ -144,6 +144,18 @@ def crashed_into_obstacle(w: WorldState) -> bool:
         for o in w['obstacles']])
 
 
+def update_world(world: WorldState, timestep: float) -> WorldState:
+    pass
+
+
+class View(TypedDict):
+    obs: float
+
+
+def world2view(world: WorldState) -> View:
+    pass
+
+
 class World:
     def __init__(self, canvas, root):
         self.w = {
