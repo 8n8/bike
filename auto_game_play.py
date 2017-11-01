@@ -1,5 +1,5 @@
 """
-It is a simple game that is played autonomously with a neural network.
+It is a simple game that is played autonomously by a neural network.
 """
 
 import json
