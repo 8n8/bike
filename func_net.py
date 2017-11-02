@@ -3,9 +3,6 @@ import numpy as np
 import time
 
 
-norm0 = k.layers.BatchNormalization()
-
-
 conv1 = k.layers.convolutional.Conv3D(
     5,
     3,
@@ -33,7 +30,7 @@ conv3 = k.layers.convolutional.Conv3D(
     data_format='channels_last')
 
 conv4 = k.layers.convolutional.Conv3D(
-    20,
+    30,
     3,
     strides=(2, 2, 2),
     padding='same',
@@ -41,7 +38,7 @@ conv4 = k.layers.convolutional.Conv3D(
     data_format='channels_last')
 
 conv5 = k.layers.convolutional.Conv3D(
-    20,
+    40,
     3,
     strides=(2, 2, 2),
     padding='same',
@@ -49,7 +46,7 @@ conv5 = k.layers.convolutional.Conv3D(
     data_format='channels_last')
 
 conv6 = k.layers.convolutional.Conv3D(
-    20,
+    30,
     3,
     strides=(2, 2, 2),
     padding='same',
@@ -66,26 +63,23 @@ conv7 = k.layers.convolutional.Conv3D(
 
 flat = k.layers.core.Flatten()
 
-norm1 = k.layers.BatchNormalization()
-
 dense1 = k.layers.Dense(50, activation='relu')
-
-norm2 = k.layers.BatchNormalization()
 
 dense2 = k.layers.Dense(25, activation='relu')
 
-norm3 = k.layers.BatchNormalization()
-
 dense3 = k.layers.Dense(2, activation='softmax')
 
+bn = k.layers.BatchNormalization
 
 def velnet():
     imin = k.layers.Input(shape=(200, 200, 5, 3), name='image_in')
     velin = k.layers.Input(shape=(2,), name='velocity_in')
-    conv = flat(conv7(conv6(conv5(conv4(conv3(conv2(conv1(norm0(
-        imin)))))))))
+    # conv = flat(bn()(conv7(bn()(conv6(bn()(conv5(bn()(conv4(bn()(conv3(
+    #     bn()(conv2(bn()(conv1(bn()(imin))))))))))))))))
+    conv = flat(bn()(conv6(bn()(conv5(bn()(conv4(bn()(conv3(
+        bn()(conv2(bn()(conv1(bn()(imin))))))))))))))
     midin = k.layers.concatenate([conv, velin])
-    dense = dense3(norm3(dense2(norm2(dense1(norm1(midin))))))
+    dense = dense3(bn()(dense2(bn()(dense1(bn()(midin))))))
     return k.models.Model(inputs=[imin, velin], outputs=[dense])
 
 

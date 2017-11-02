@@ -167,11 +167,15 @@ def main():
         used_data_files: List[str] = []
     if os.path.isfile(savenetfile):
         model = load_model(savenetfile)
+        model.compile(
+            loss='categorical_crossentropy',
+            optimizer=Adam(lr=0.000005, decay=2e-4),
+            metrics=['accuracy'])
     else:
         model = f.velnet()
         model.compile(
             loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.0002, decay=1e-5),
+            optimizer=Adam(lr=0.0002, decay=3e-6),
             metrics=['accuracy'])
     training_cycle_num: int = 0
     while True:
