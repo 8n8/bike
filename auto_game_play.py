@@ -36,6 +36,14 @@ class DataPoint(TypedDict):
     timestamp: float
 
 
+class DataSet(TypedDict):
+    t81: DataPoint
+    t27: DataPoint
+    t09: DataPoint
+    t03: DataPoint
+    t01: DataPoint
+
+
 def angle_mod(angle: float) -> float:
     """ It makes sure the angle is between 0 and 2π. """
     if angle < 0:
@@ -350,7 +358,31 @@ def plot_objects(canvas, s: WorldState):
     [plot_obstacle(canvas, o) for o in centred_obstacles]
 
 
-def main():
+def choose_velocity(model, dataset: DataSet) -> Velocity:
+    return {'angle': 0, 'speed': 0}
+
+
+def main(model) -> float:
+    world_history: List[WorldState] = [{
+        'velocity': {'speed': 0, 'angle': 0},
+        'position': {'x': 0, 'y': 0},
+        'obstacles': []}]
+    time_since_start = 0
+    TIMESTEP = 0.03
+    while time_since_start < 30:
+        if crashed_into_obstacle(world_history[-1]):
+            return time_since_start
+        max_new_obstacles, obstacle_params = u.generate_params()
+        newstate = update_world(
+            world_history[-1],
+            TIMESTEP,
+            obstacle_params,
+            max_new_obstacles)
+        world_history.append(newstate)
+
+    return time_since_start
+            
+
     root = k.Tk()
     root.title('NavNet data generator game')
     root.geometry('800x600')
