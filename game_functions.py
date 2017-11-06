@@ -1,4 +1,5 @@
 import math
+from PIL import ImageTk, Image
 from typing import List, Tuple
 import game_gui as g
 import update_obstacle_pop as u
@@ -40,7 +41,7 @@ def _speed_mod(speed: float) -> float:
 def _update_velocity(key: g.KeyPress, v: g.Velocity) -> g.Velocity:
     """ It changes the velocity in response to a key press. """
     speed_step = 0.7
-    angle_step = math.pi/26
+    angle_step = math.pi/46
     if key == g.KeyPress.UP:
         return g.Velocity(
             angle=v.angle,
@@ -61,8 +62,8 @@ def _update_velocity(key: g.KeyPress, v: g.Velocity) -> g.Velocity:
 
 
 def _update_position(v: g.Velocity, p: s.Vector, t: float) -> s.Vector:
-    velx = v.speed * math.cos(v.angle)
-    vely = v.speed * math.sin(v.angle)
+    velx: float = v.speed * math.cos(v.angle)
+    vely: float = v.speed * math.sin(v.angle)
     return {
         'x': p['x'] + t * velx,
         'y': p['y'] + t * vely}
@@ -99,10 +100,10 @@ def polar2cart(v: g.Velocity) -> s.Vector:
 def _arrow(v: g.Velocity, colour: str) -> g.TkArrow:
     vcart = polar2cart(v)
     return g.TkArrow(
-        start_x=XOFFSET + SCALE*(-vcart['x']),
-        start_y=XOFFSET - SCALE*(-vcart['y']),
+        start_x=XOFFSET - SCALE*(vcart['x']),
+        start_y=YOFFSET + SCALE*(vcart['y']),
         stop_x=XOFFSET + SCALE*vcart['x'],
-        stop_y=XOFFSET + SCALE*vcart['y'],
+        stop_y=YOFFSET - SCALE*vcart['y'],
         colour=colour,
         width=1)
 
@@ -157,19 +158,51 @@ def draw_arrows(
     #
     #    [ x cos ϴ - y sin ϴ ]
     #    [ x sin ϴ + y cos ϴ ]
-    theta = actual_v.angle + math.pi/2
     rotated_target = g.Velocity(
         speed=target_v.speed,
-        angle=_angle_mod(target_v.angle + theta))
+        angle=_angle_mod(target_v.angle - actual_v.angle + math.pi/2))
     rotated_actual = g.Velocity(
         speed=actual_v.speed,
-        angle=theta)
+        angle=math.pi/2)
     return (_arrow(rotated_actual, 'red'),
             _arrow(rotated_target, 'black'))
 
 
+def numpy_to_TKimage(i: s.ImageSet):
+    """
+    It converts a set of four camera images from the four cameras from
+    m x n x 3 numpy arrays to the right format for displaying in
+    Tkinter.
+    """
+    def f(im):
+        return ImageTk.PhotoImage(
+            Image.fromarray(im).resize((200, 200), Image.ANTIALIAS))
+    return {
+        'front': f(i['front']),
+        'left': f(i['left']),
+        'back': f(i['back']),
+        'right': f(i['right'])}
+
+
+def make_images(w: g.WorldState) -> List[g.TkImage]:
+    """
+    It calculates the images from the worldstate and converts them into
+    the correct format for displaying in a Tkinter window.
+    """
+    images = numpy_to_TKimage(s._calculate_images(
+        w.obstacles,
+        w.position['x'],
+        w.position['y'],
+        w.velocity.angle))
+    return [
+        g.TkImage(image=images['front'], x=320, y=110),
+        g.TkImage(image=images['back'], x=320, y=330),
+        g.TkImage(image=images['left'], x=110, y=220),
+        g.TkImage(image=images['right'], x=530, y=220)]
+
+
 def world2view(w: g.WorldState) -> List[g.TkPicture]:
-    robot: g.TkPicture = _circle(XOFFSET, YOFFSET, SCALE * 1.0, 'red')
+    robot: g.TkPicture = _circle(XOFFSET, YOFFSET, SCALE * 1.2, 'red')
     shifted_obstacles: List[s.Obstacle] = [
         update_obstacle(o, w.position, w.velocity) for o in w.obstacles]
     obstacles: List[g.TkPicture] = [
@@ -178,4 +211,5 @@ def world2view(w: g.WorldState) -> List[g.TkPicture]:
         w.velocity, w.target_velocity)
     arrow1: g.TkPicture = arrows[0]
     arrow2: g.TkPicture = arrows[1]
-    return [robot, arrow1, arrow2] + obstacles
+    images: List[g.TkImage] = make_images(w)
+    return [robot, arrow1, arrow2] + obstacles + images
