@@ -16,10 +16,6 @@ YOFFSET: float = 800
 SCALE: float = 8
 
 
-
-
-
-
 class DataPoint(TypedDict):
     world: WorldState
     target_velocity: Velocity

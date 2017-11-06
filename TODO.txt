@@ -1,6 +1,1 @@
-+ finish data generation game
-    + centre on robot
-    + add data capture
-+ play data generation game to generate data
-+ make program for loading generated data
-+ train navigation neural net
++ change the TypedDicts to NamedTuples where appropriate

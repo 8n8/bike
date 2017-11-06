@@ -47,8 +47,7 @@ def main(
         obstacle_list: List[w.Obstacle],
         t: float,
         bike_position: w.Vector,
-        max_new_obstacles,
-        obstacle_params: List[ObstacleParams]
+        rand: RandomData
         ) -> List[w.Obstacle]:
     """
     Given the current obstacles, a time period and the current bike
@@ -62,8 +61,8 @@ def main(
     new_obstacles: List[w.Obstacle] = _make_new_obstacles(
         _num_close_obstacles(bike_position, updated_obstacles),
         bike_position,
-        max_new_obstacles,
-        obstacle_params)
+        rand['max_new'],
+        rand['obstacles'])
     return updated_obstacles + new_obstacles
 
 
