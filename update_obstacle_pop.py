@@ -21,7 +21,12 @@ class ObstacleParams(TypedDict):
     direction: float
 
 
-def _generate_obstacle_params():
+class RandomData(TypedDict):
+    max_new: int
+    obstacles: List[ObstacleParams]
+
+
+def _generate_obstacle_params() -> ObstacleParams:
     return {
         'distance': random.randint(30, 50),
         'angle': random.uniform(0, 2*m.pi),
@@ -29,11 +34,13 @@ def _generate_obstacle_params():
         'direction': random.uniform(0, 2*m.pi)}
 
 
-def generate_params():
+def generate_params() -> RandomData:
     max_new: int = random.randint(0, 30)
     obs: List[ObstacleParams] = [
         _generate_obstacle_params() for _ in range(max_new)]
-    return max_new, obs
+    return {
+        'max_new': max_new,
+        'obstacles': obs}
 
 
 def main(

@@ -16,15 +16,8 @@ YOFFSET: float = 800
 SCALE: float = 8
 
 
-class Velocity(TypedDict):
-    angle: float  # between 0 and 2π
-    speed: float
 
 
-class WorldState(TypedDict):
-    velocity: Velocity
-    position: w.Vector
-    obstacles: List[w.Obstacle]
 
 
 class DataPoint(TypedDict):
