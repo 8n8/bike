@@ -4,9 +4,13 @@ It provides a function for creating a Tkinter GUI.
 
 from enum import Enum, auto, unique
 import json
+import math
 import tkinter as k
-from typing import Any, Callable, NamedTuple, List, Union
+from typing import Any, Callable, NamedTuple, List, Union, Tuple
 import uuid
+import data_gen_game as dg
+from keras.models import load_model  # type: ignore
+import train_nav_net
 import update_obstacle_pop as u
 import world2sensor as w
 
@@ -68,14 +72,14 @@ TkPicture = Union[TkOval, TkArrow, TkImage]
 UpdateWorld = Callable[[WorldState, u.RandomData, float], WorldState]
 
 
-def update_keyboard(k: KeyPress, w: WorldState) -> WorldState:
+def update_keyboard(key: KeyPress, s: WorldState) -> WorldState:
     return WorldState(
-        crashed=w.crashed,
-        velocity=w.velocity,
-        position=w.position,
-        target_velocity=w.target_velocity,
-        obstacles=w.obstacles,
-        keyboard=k)
+        crashed=s.crashed,
+        velocity=s.velocity,
+        position=s.position,
+        target_velocity=s.target_velocity,
+        obstacles=s.obstacles,
+        keyboard=key)
 
 
 def last4(L):
@@ -84,8 +88,75 @@ def last4(L):
     return L[-4:]
 
 
-def close_window(root):
-    root.destroy('all')
+def convert_data_point(d: DataPoint) -> dg.DataPoint:
+    return {
+        'world': {
+            'velocity': {
+                'speed': d.state.velocity.speed,
+                'angle': d.state.velocity.angle},
+            'position': d.state.position,
+            'obstacles': d.state.obstacles},
+        'target_velocity': {
+            'speed': d.state.target_velocity.speed,
+            'angle': d.state.target_velocity.angle},
+        'timestamp': d.timestamp}
+
+
+def convert_data_points(ds: List[DataPoint]) -> List[dg.DataPoint]:
+    return [convert_data_point(d) for d in ds]
+
+
+model = load_model('nav_net1.h5')
+
+
+def array2velocity(arr) -> Velocity:
+    return Velocity(
+        speed=arr[0][0]*20 - 10,
+        angle=arr[0][1]*2*math.pi)
+
+
+def pad_data_point(oldest: dg.DataPoint, timestep: float) -> dg.DataPoint:
+    return {
+        'world': oldest['world'],
+        'target_velocity': oldest['target_velocity'],
+        'timestamp': oldest['timestamp'] - timestep}
+
+
+def pad_data(
+        ds: List[dg.DataPoint],
+        timestep: float) -> List[dg.DataPoint]:
+    if ds == []:
+        return []
+    lends = len(ds)
+    if lends > 1200:
+        return ds
+    for i in range(1200-lends):
+        oldest = ds[0]
+        ds = [pad_data_point(oldest, timestep)] + ds
+    return ds
+
+
+def predict_velocity(
+        ds: List[dg.DataPoint],
+        timestep: float) -> Tuple[str, Velocity]:
+    err, dat = train_nav_net.convert_data(pad_data(ds, timestep))
+    if err is not None:
+        return err, None
+    result = model.predict(
+        {'image_in': dat['image_in'],
+         'velocity_in': dat['v_in']},
+        batch_size=1)
+    return None, array2velocity(result)
+
+
+def update_velocity(v: Velocity, s: WorldState) -> WorldState:
+    return WorldState(
+        crashed=s.crashed,
+        velocity=v,
+        position=s.position,
+        target_velocity=s.target_velocity,
+        obstacles=s.obstacles,
+        keyboard=s.keyboard)
 
 
 class _World:
@@ -146,6 +217,14 @@ class _World:
             self.timestep)
         self.time += self.timestep
         self.counter += 1
+        if self.counter % 100 == 0:
+            err, velocity = predict_velocity(
+                convert_data_points(self.data),
+                self.timestep)
+            print(err)
+            if err is None:
+                print('here')
+                self.state = update_velocity(velocity, self.state)
         self.canvas.after(1, self.update)
 
     def keyboard_up(self, _):

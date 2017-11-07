@@ -16,6 +16,17 @@ YOFFSET: float = 800
 SCALE: float = 8
 
 
+class Velocity(TypedDict):
+    angle: float  # between 0 and 2π
+    speed: float
+
+
+class WorldState(TypedDict):
+    velocity: Velocity
+    position: w.Vector
+    obstacles: List[w.Obstacle]
+
+
 class DataPoint(TypedDict):
     world: WorldState
     target_velocity: Velocity
@@ -40,7 +51,7 @@ def speed_mod(speed: float) -> float:
 
 def update_velocity(key: str, v: Velocity) -> Velocity:
     """ It changes the velocity in response to a key press. """
-    speed_step = 0.7
+    speed_step = 0.7 
     angle_step = math.pi/26
     if key == 'up':
         return {
@@ -98,8 +109,7 @@ def make_images(s: WorldState):
 def update_world(
         s: WorldState,
         t: float,
-        obstacle_params: List[u.ObstacleParams],
-        max_new_obstacles: int
+        rand: u.RandomData
         ) -> WorldState:
     """
     It calculates the next state of the world, given the previous one and
@@ -118,8 +128,7 @@ def update_world(
             s['obstacles'],
             t,
             s['position'],
-            max_new_obstacles,
-            obstacle_params)}
+            rand)}
 
 
 def distance_between(a: w.Vector, b: w.Vector) -> float:
@@ -166,9 +175,8 @@ class World:
         cart_target_v = {'x': self.target_v['speed'], 'y': 0}
         draw_arrows(self.canvas, self.w['velocity'], cart_target_v,
                     self.w['position'])
-        max_new_obstacles, obstacle_params = u.generate_params()
         self.w = update_world(
-            self.w, rate, obstacle_params, max_new_obstacles)
+            self.w, rate, u.generate_params())
         self.images = make_images(self.w)
         self.canvas.create_image(320, 110, image=self.images['front'])
         self.canvas.create_image(320, 330, image=self.images['back'])
