@@ -1,4 +1,3 @@
-import math
 import random
 import game_gui as g
 import game_functions as f

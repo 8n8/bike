@@ -5,7 +5,7 @@ import numpy as np
 from typing import List
 import update_obstacle_pop as u
 import world2sensor as w
-from world2sensor import _calculate_images
+from world2sensor import _calculate_rgb_images
 
 
 class NNData(TypedDict):
@@ -61,7 +61,7 @@ def single_data_point() -> NNData:
     obstacles100 = g(obstacles300, 0.2)
 
     def f(x):
-        return _image_dict2np(_calculate_images(x, 0, 0, 0))
+        return _image_dict2np(_calculate_rgb_images(x, 0, 0, 0))
 
     images = (
         f(obstacles8100),

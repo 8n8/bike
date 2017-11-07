@@ -44,12 +44,8 @@ def _image_dict2np(i: w.ImageSet) -> 'np.ndarray[np.uint8]':
     It converts the dictionary containing the camera images into a
     single numpy array.
     """
-    top_plus_right = np.concatenate(  # type: ignore
-        [i['front'], i['right']], axis=0)
-    left_plus_bottom = np.concatenate(  # type: ignore
-        [i['left'], i['back']], axis=0)
-    return np.concatenate([top_plus_right,  # type: ignore
-                           left_plus_bottom], axis=1)
+    result = np.stack([i['front'], i['back'], i['left'], i['right']], axis=1)
+    return result
 
 
 def i_for_n_seconds_ago(
@@ -82,7 +78,7 @@ def make_batch(
     and 8.1 seconds.
     """
     now: float = timestamps[i]
-    times: List[float] = [8.1, 2.7, 0.9, 0.3, 0.1]
+    times: List[float] = [2.7, 0.9, 0.3, 0.1]
     i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now) for t in times]
     nones: List[bool] = [i is None for i in i_s]
     if any(nones):
@@ -108,6 +104,7 @@ def velocity2array(v: g.Velocity) -> 'np.ndarray[np.float64]':
 IndexErrImage = List[Tuple[int, Tuple[str, 'np.ndarray[np.uint8]']]]
 
 
+@profile
 def convert_data(
         data_batch: List[g.DataPoint]
         ) -> Tuple[str, TrainingData]:
@@ -116,7 +113,7 @@ def convert_data(
     ready for feeding into the neural network.
     """
     def worldstate2images(s: g.WorldState) -> 'np.ndarray[np.uint8]':
-        return _image_dict2np(w._calculate_images(
+        return _image_dict2np(w._calculate_small_images(
             s['obstacles'],
             s['position']['x'],
             s['position']['y'],
@@ -167,15 +164,11 @@ def main():
         used_data_files: List[str] = []
     if os.path.isfile(savenetfile):
         model = load_model(savenetfile)
-        model.compile(
-            loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.000005, decay=2e-4),
-            metrics=['accuracy'])
     else:
         model = f.velnet()
         model.compile(
             loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.0002, decay=3e-6),
+            optimizer=Adam(lr=0.0002, decay=3e-5),
             metrics=['accuracy'])
     training_cycle_num: int = 0
     while True:
@@ -199,8 +192,8 @@ def main():
         model.fit(
             {'image_in': d['image_in'], 'velocity_in': d['v_in']},
             d['v_out'],
-            batch_size=17,
-            epochs=1)
+            batch_size=1000,
+            epochs=3)
         with open(usedfilelistfile, 'w') as ff:
             json.dump(used_data_files, ff)
         model.save(savenetfile)

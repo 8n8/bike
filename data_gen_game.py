@@ -51,7 +51,7 @@ def speed_mod(speed: float) -> float:
 
 def update_velocity(key: str, v: Velocity) -> Velocity:
     """ It changes the velocity in response to a key press. """
-    speed_step = 0.7 
+    speed_step = 0.7
     angle_step = math.pi/26
     if key == 'up':
         return {
@@ -99,7 +99,7 @@ def make_images(s: WorldState):
     It calculates the images from the worldstate and converts them into
     the correct format for displaying in a Tkinter window.
     """
-    return numpy_to_TKimage(w._calculate_images(
+    return numpy_to_TKimage(w._calculate_rgb_images(
         s['obstacles'],
         s['position']['x'],
         s['position']['y'],

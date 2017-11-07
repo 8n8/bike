@@ -1,5 +1,5 @@
 import math
-from PIL import ImageTk, Image
+from PIL import ImageTk, Image  # type: ignore
 from typing import List, Tuple
 import game_gui as g
 import update_obstacle_pop as u
@@ -189,7 +189,7 @@ def make_images(w: g.WorldState) -> List[g.TkImage]:
     It calculates the images from the worldstate and converts them into
     the correct format for displaying in a Tkinter window.
     """
-    images = numpy_to_TKimage(s._calculate_images(
+    images = numpy_to_TKimage(s._calculate_rgb_images(
         w.obstacles,
         w.position['x'],
         w.position['y'],
@@ -212,4 +212,4 @@ def world2view(w: g.WorldState) -> List[g.TkPicture]:
     arrow1: g.TkPicture = arrows[0]
     arrow2: g.TkPicture = arrows[1]
     images: List[g.TkImage] = make_images(w)
-    return [robot, arrow1, arrow2] + obstacles + images
+    return [robot, arrow1, arrow2] + obstacles + images  # type: ignore
