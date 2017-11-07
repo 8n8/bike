@@ -104,7 +104,15 @@ def velocity2array(v: g.Velocity) -> 'np.ndarray[np.float64]':
 IndexErrImage = List[Tuple[int, Tuple[str, 'np.ndarray[np.uint8]']]]
 
 
-@profile
+def worldstate2images(s: g.WorldState) -> 'np.ndarray[np.uint8]':
+    result = w._calculate_small_images(
+        s['obstacles'],
+        s['position']['x'],
+        s['position']['y'],
+        s['velocity']['angle'])
+    return _image_dict2np(result)
+
+
 def convert_data(
         data_batch: List[g.DataPoint]
         ) -> Tuple[str, TrainingData]:
@@ -112,12 +120,6 @@ def convert_data(
     It converts the data from the game format into numpy arrays
     ready for feeding into the neural network.
     """
-    def worldstate2images(s: g.WorldState) -> 'np.ndarray[np.uint8]':
-        return _image_dict2np(w._calculate_small_images(
-            s['obstacles'],
-            s['position']['x'],
-            s['position']['y'],
-            s['velocity']['angle']))
     ims: List['np.ndarray[np.uint8]'] = [
         worldstate2images(i['world']) for i in data_batch]
     vs: List['np.ndarray[np.float64]'] = [

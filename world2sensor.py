@@ -420,19 +420,31 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
         return X['y'] - A['y']
     gradient: float = (D['y'] - A['y']) / (D['x'] - A['x'])
     angle: float = m.atan(gradient)
-    rotation: 'np.ndarray[float]' = np.array([
-        [m.cos(angle), m.sin(angle)],
-        [-m.sin(angle), m.cos(angle)]])
+    cosangle = m.cos(angle)
+    sinangle = m.sin(angle)
+    # The rotated point is found by multiplying it by the rotation
+    # matrix:
+    #
+    # [rot11 rot12] [p1] = [rot11 * p1 + rot12 * p2]
+    # [rot21 rot22] [p2]   [rot21 * p1 + rot22 * p2]
+    #
+    # The y-coordinate is thrown away, so the wanted result is
+    #
+    #     rot11 * p1 + rot12 * p2
+    #
+    # In this case:
+    #
+    #     rot11 = cos(ϴ)
+    #     rot12 = sin(ϴ)
 
     def flatten(p: Vector) -> float:
-        return np.matmul(  # type: ignore
-            rotation,
-            np.array([[p['x']], [p['y']]]))[0][0]
+        return cosangle * p['x'] + sinangle * p['y']
 
     Anew, Xnew = flatten(A), flatten(X)
     return Xnew - Anew
 
 
+@profile
 def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     """
     It works out the vectors needed for creating the camera images, using
@@ -492,13 +504,19 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     k2: float = cam['k'] * m.sin(cam['alpha'])
     r: float = obs['radius']
     cos_half_theta: float = m.cos(cam['theta']/2)
+    P = _find_P(k1, k2, n1, n2, t1, t2, r)
+    Q = _find_Q(k1, k2, n1, n2, t1, t2, r)
+    A = _find_A(k1, k2, cos_half_theta)
+    B = _find_B(k1, k2, n1, n2, t1, t2, r)
+    C = _find_C(k1, k2, n1, n2, t1, t2, r)
+    D = _find_D(k1, k2, cos_half_theta)
     return {
-        'P': _find_P(k1, k2, n1, n2, t1, t2, r),
-        'Q': _find_Q(k1, k2, n1, n2, t1, t2, r),
-        'A': _find_A(k1, k2, cos_half_theta),
-        'B': _find_B(k1, k2, n1, n2, t1, t2, r),
-        'C': _find_C(k1, k2, n1, n2, t1, t2, r),
-        'D': _find_D(k1, k2, cos_half_theta)}
+        'P': P,
+        'Q': Q,
+        'A': A,
+        'B': B,
+        'C': C,
+        'D': D}
 
 
 def _find_P(
