@@ -107,6 +107,7 @@ class _World:
         self.update_world = update_world
         self.time = 0
         self.images: List[TkImage] = []
+        self.counter = 0
 
     def update(self):
         """ It updates the gui window and the world state. """
@@ -144,7 +145,8 @@ class _World:
             u.generate_params(),
             self.timestep)
         self.time += self.timestep
-        self.canvas.after(int(self.timestep * 1000), self.update)
+        self.counter += 1
+        self.canvas.after(1, self.update)
 
     def keyboard_up(self, _):
         """
