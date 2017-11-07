@@ -6,11 +6,13 @@ from enum import Enum, auto, unique
 import json
 import math
 import tkinter as k
+import game_gui as g
 from typing import Any, Callable, NamedTuple, List, Union, Tuple
 import uuid
 import data_gen_game as dg
+import numpy as np
 from keras.models import load_model  # type: ignore
-import train_nav_net
+import train_nav_net as tr
 import update_obstacle_pop as u
 import world2sensor as w
 
@@ -106,7 +108,7 @@ def convert_data_points(ds: List[DataPoint]) -> List[dg.DataPoint]:
     return [convert_data_point(d) for d in ds]
 
 
-model = load_model('nav_net1.h5')
+model = load_model('nav_net.h5')
 
 
 def array2velocity(arr) -> Velocity:
@@ -136,16 +138,59 @@ def pad_data(
     return ds
 
 
+def convert_data(
+        data_batch: List[g.DataPoint]
+        ) -> Tuple[str, tr.TrainingData]:
+    """
+    It converts the data from the game format into numpy arrays
+    ready for feeding into the neural network.
+    """
+    ims: List['np.ndarray[np.uint8]'] = [
+        tr.worldstate2images(i['world']) for i in data_batch]
+    vs: List['np.ndarray[np.float64]'] = [
+        tr.velocity2array(i['world']['velocity']) for i in data_batch]
+    target_vs: List['np.ndarray[np.float64]'] = [
+        tr.velocity2array(i['target_velocity']) for i in data_batch]
+    timestamps: List[float] = [i['timestamp'] for i in data_batch]
+    numpoints: int = len(timestamps)
+    imbatches_with_errors_and_indices: IndexErrImage = [
+        (i, tr.make_batch(ims, timestamps, i)) for i in range(numpoints)]
+    i_s: Set[int] = {i for i, (err, _) in imbatches_with_errors_and_indices
+                     if err is None}
+    vs_used: List['np.ndarray[np.float64]'] = [
+        v for i, v in enumerate(vs) if i in i_s]
+    target_vs_used: List['np.ndarray[np.float64]'] = [
+        t for i, t in enumerate(target_vs) if i in i_s]
+    imbatches: List['np.ndarray[np.uint8]'] = [
+        i for _, (err, i) in imbatches_with_errors_and_indices
+        if err is None]
+    if imbatches == []:
+        return "No useful data in batch.", None
+    image_in: 'np.ndarray[np.uint8]' = (
+        np.stack([imbatches[-1]], axis=0))  # type: ignore
+    v_in: 'np.ndarray[np.float64]' = (
+        np.stack(target_vs_used, axis=0))  # type: ignore
+    v_out: 'np.ndarray[np.float64]' = np.stack(vs_used, axis=0)  # type: ignore
+    return (None, {
+        'image_in': image_in,
+        'v_in': v_in,
+        'v_out': v_out})
+
+
 def predict_velocity(
         ds: List[dg.DataPoint],
         timestep: float) -> Tuple[str, Velocity]:
-    err, dat = train_nav_net.convert_data(pad_data(ds, timestep))
+    err, dat = convert_data(pad_data(ds, timestep))
     if err is not None:
         return err, None
+    print('in shape:')
+    print(dat['image_in'].shape)
     result = model.predict(
         {'image_in': dat['image_in'],
          'velocity_in': dat['v_in']},
         batch_size=1)
+    print("out shape:")
+    print(result.shape)
     return None, array2velocity(result)
 
 

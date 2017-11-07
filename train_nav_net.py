@@ -44,7 +44,9 @@ def _image_dict2np(i: w.ImageSet) -> 'np.ndarray[np.uint8]':
     It converts the dictionary containing the camera images into a
     single numpy array.
     """
-    result = np.stack([i['front'], i['back'], i['left'], i['right']], axis=1)
+    result = np.stack(  # type: ignore
+        [i['front'], i['back'], i['left'], i['right']],
+        axis=1)
     return result
 
 
@@ -170,7 +172,7 @@ def main():
         model = f.velnet()
         model.compile(
             loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.0002, decay=3e-5),
+            optimizer=Adam(lr=0.001, decay=3e-5),
             metrics=['accuracy'])
     training_cycle_num: int = 0
     while True:
@@ -194,8 +196,8 @@ def main():
         model.fit(
             {'image_in': d['image_in'], 'velocity_in': d['v_in']},
             d['v_out'],
-            batch_size=1000,
-            epochs=3)
+            batch_size=1,
+            epochs=1)
         with open(usedfilelistfile, 'w') as ff:
             json.dump(used_data_files, ff)
         model.save(savenetfile)

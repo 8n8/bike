@@ -5,7 +5,7 @@ import time
 
 conv1 = k.layers.convolutional.Conv2D(
     5,
-    3,
+    5,
     strides=(2, 2),
     padding='same',
     activation='relu')
@@ -13,7 +13,7 @@ conv1 = k.layers.convolutional.Conv2D(
 
 conv2 = k.layers.convolutional.Conv2D(
     10,
-    3,
+    5,
     strides=(2, 2),
     padding='same',
     activation='relu')
@@ -21,7 +21,7 @@ conv2 = k.layers.convolutional.Conv2D(
 
 conv3 = k.layers.convolutional.Conv2D(
     20,
-    3,
+    5,
     strides=(2, 2),
     padding='same',
     activation='relu')
@@ -29,7 +29,7 @@ conv3 = k.layers.convolutional.Conv2D(
 
 conv4 = k.layers.convolutional.Conv2D(
     30,
-    3,
+    5,
     strides=(2, 2),
     padding='same',
     activation='relu')
@@ -37,15 +37,15 @@ conv4 = k.layers.convolutional.Conv2D(
 
 conv5 = k.layers.convolutional.Conv2D(
     40,
-    3,
+    5,
     strides=(2, 2),
     padding='same',
     activation='relu')
 
 
 conv6 = k.layers.convolutional.Conv2D(
-    30,
-    3,
+    60,
+    5,
     strides=(2, 2),
     padding='same',
     activation='relu')
