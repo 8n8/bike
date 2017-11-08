@@ -171,7 +171,7 @@ def main():
     else:
         model = f.velnet()
         model.compile(
-            loss='categorical_crossentropy',
+            loss='mean_absolute_error',
             optimizer=Adam(lr=0.001, decay=3e-5),
             metrics=['accuracy'])
     training_cycle_num: int = 0
@@ -196,8 +196,8 @@ def main():
         model.fit(
             {'image_in': d['image_in'], 'velocity_in': d['v_in']},
             d['v_out'],
-            batch_size=1,
-            epochs=1)
+            batch_size=1000,
+            epochs=10)
         with open(usedfilelistfile, 'w') as ff:
             json.dump(used_data_files, ff)
         model.save(savenetfile)

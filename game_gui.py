@@ -108,7 +108,7 @@ def convert_data_points(ds: List[DataPoint]) -> List[dg.DataPoint]:
     return [convert_data_point(d) for d in ds]
 
 
-model = load_model('nav_net.h5')
+model = load_model('nav_net_Adam_001_3e5_catcross.h5')
 
 
 def array2velocity(arr) -> Velocity:
@@ -180,7 +180,7 @@ def convert_data(
 def predict_velocity(
         ds: List[dg.DataPoint],
         timestep: float) -> Tuple[str, Velocity]:
-    err, dat = convert_data(pad_data(ds, timestep))
+    err, dat = convert_data(ds)
     if err is not None:
         return err, None
     print('in shape:')
