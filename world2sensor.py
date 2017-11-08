@@ -333,7 +333,6 @@ def _width_of_camera_lens(cam: CamSpec) -> float:
     return 2 * cam['k'] * m.tan(cam['theta'] / 2)
 
 
-@profile
 def _calculate_ABCD_coords(
         cam: CamSpec,
         obs: Obstacle,
@@ -518,70 +517,58 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
         + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1
         + 2*k1*k2*t1*t2 + k22*n22 - 2*k22*n2*t2
         - k22*r2 + k22*t22)
-    BCxcomp1: float = (k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
-                       + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1)
-    BCxcomp2: float = (k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
-                       - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
-                       - k23*n1*t2 - k23*n2*t1)
-    BCycomp1: float = k13*n1*n2 - k13*n1*t2 - k13*n2*t1
-    BCycomp2: float = (k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
-                       - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
-                       - k1*k22*n1*t2 - k1*k22*n2*t1)
-    BCycomp3: float = (k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
-                       - k23*r2 + k23*t22)
-    rxsqrt: float = r*sqrt
-    k12xk2xrxsqrt: float = k12*k2*rxsqrt
-    k23xrxsqrt: float = k23*rxsqrt
-    k23xt1xt2: float = k23*t1*t2
-    k1xk22xrxsqrt: float = k1*k22*rxsqrt
-    k13xrxsqrt: float = k13*rxsqrt
-    A2part: float = m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta
-    PQdenominator: float = n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22 
-    _n1xr: float = -n1*r
-    n2xsqrt: float = n2*sqrt
-    rxt1: float = r*t1
-    t2xsqrt: float = t2*sqrt
-    rxn2_t2: float = r*(n2-t2)
-    n1_t1xsqrt: float = (n1 - t1) * sqrt
-    _n1xrPrxt1: float = _n1xr + rxt1
-    ADx2: float = k2*A2part
-    ADy2: float = k1*A2part
     return {
         'P': {
-            'x': r*(_n1xrPrxt1 - n2xsqrt + t2xsqrt) / PQdenominator,
-            'y': -r*(rxn2_t2 - n1_t1xsqrt) / PQdenominator},
+            'x': (r*(-n1*r - n2*sqrt + r*t1 + t2*sqrt)
+                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
+            'y': (-r*(r*(n2 - t2) - (n1 - t1)*sqrt)
+                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
         'Q': {
-            'x': r*(_n1xrPrxt1 + n2xsqrt - t2xsqrt) / PQdenominator,
-            'y': -r*(rxn2_t2 + n1_t1xsqrt) / PQdenominator},
+            'x': (r*(-n1*r + n2*sqrt + r*t1 - t2*sqrt)
+                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
+            'y': (-r*(r*(n2 - t2) + (n1 - t1) * sqrt)
+                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
         'A': {
-            'x': k1 - ADx2,
-            'y': k2 + ADy2},
+            'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+            'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta},
         'B': {
-            'x': ((BCxcomp1
-                   - k12xk2xrxsqrt
-                   + BCxcomp2
-                   - k23xrxsqrt
-                   + k23xt1xt2)
+            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
+                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
+                   - k12*k2*r
+                   * sqrt
+                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
+                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
+                   - k23*n1*t2 - k23*n2*t1 - k23*r
+                   * sqrt
+                   + k23*t1*t2)
                   / BCdenominator),
-            'y': ((BCycomp1
-                   + k13xrxsqrt 
-                   + BCycomp2
-                   + k1xk22xrxsqrt
-                   + BCycomp3)
+            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 + k13*r
+                   * sqrt
+                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
+                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
+                   - k1*k22*n1*t2 - k1*k22*n2*t1 + k1*k22*r
+                   * sqrt
+                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
+                   - k23*r2 + k23*t22)
                   / BCdenominator)},
         'C': {
-            'x': ((BCxcomp1
-                   + k12xk2xrxsqrt
-                   + BCxcomp2
-                   + k23xrxsqrt
-                   + k23xt1xt2)
+            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
+                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
+                   + k12*k2*r*sqrt
+                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
+                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
+                   - k23*n1*t2 - k23*n2*t1 + k23*r*sqrt
+                   + k23*t1*t2)
                   / BCdenominator),
-            'y': ((BCycomp1
-                   - k13xrxsqrt
-                   + BCycomp2
-                   - k1xk22xrxsqrt
-                   + BCycomp3)
+            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 - k13*r
+                   * sqrt
+                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
+                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
+                   - k1*k22*n1*t2 - k1*k22*n2*t1 - k1*k22*r
+                   * sqrt
+                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
+                   - k23*r2 + k23*t22)
                   / BCdenominator)},
         'D': {
-            'x': k1 + ADx2,
-            'y': k2 - ADy2}}
+            'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+            'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}}

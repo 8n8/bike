@@ -80,7 +80,7 @@ def make_batch(
     and 8.1 seconds.
     """
     now: float = timestamps[i]
-    times: List[float] = [2.7, 0.9, 0.3, 0.1]
+    times: List[float] = [1.5, 1.0, 0.5, 0.0]
     i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now)
                       for t in times]
     nones: List[bool] = [i is None for i in i_s]
@@ -198,7 +198,7 @@ def main():
             {'image_in': d['image_in'], 'velocity_in': d['v_in']},
             d['v_out'],
             batch_size=1000,
-            epochs=10)
+            epochs=1)
         with open(usedfilelistfile, 'w') as ff:
             json.dump(used_data_files, ff)
         model.save(savenetfile)

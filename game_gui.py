@@ -108,7 +108,7 @@ def convert_data_points(ds: List[DataPoint]) -> List[dg.DataPoint]:
     return [convert_data_point(d) for d in ds]
 
 
-model = load_model('nav_net_Adam_001_3e5_catcross.h5')
+model = load_model('nav_net.h5')
 
 
 def array2velocity(arr) -> Velocity:
@@ -173,7 +173,7 @@ def make_batch(
     and 8.1 seconds.
     """
     now: float = timestamps[i]
-    times: List[float] = [2.7, 0.9, 0.3, 0.1]
+    times: List[float] = [1.5, 1.0, 0.5, 0.0]
     i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now) for t in times]
     nones: List[bool] = [i is None for i in i_s]
     if any(nones):
@@ -306,17 +306,14 @@ class _World:
             self.timestep)
         self.time += self.timestep
         self.counter += 1
-        if self.counter % 100 == 0:
+        if self.counter % 10 == 0:
             chopped = self.data[-300:]
             err, velocity = predict_velocity(
                 convert_data_points(chopped),
                 self.timestep)
             if err is None:
                 self.state = update_velocity(velocity, self.state)
-        if self.counter > 1000:
-            print('ending')
-            return
-        self.canvas.after(1, self.update)
+        self.canvas.after(int(1000 * self.timestep), self.update)
 
     def keyboard_up(self, _):
         """
