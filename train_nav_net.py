@@ -81,7 +81,8 @@ def make_batch(
     """
     now: float = timestamps[i]
     times: List[float] = [2.7, 0.9, 0.3, 0.1]
-    i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now) for t in times]
+    i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now)
+                      for t in times]
     nones: List[bool] = [i is None for i in i_s]
     if any(nones):
         return "Not possible to make this batch.", None

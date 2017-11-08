@@ -207,8 +207,7 @@ def _image_of_all_visible_obstacles(
         _rounded_image_parameters(cam_spec, obstacle)
         for obstacle in obstacle_list]
     image_parameter_list_no_errs: List[RoundedImageParameters] = [
-        i[1] for i in parameter_list_with_errs
-        if i[0] is None]
+        i[1] for i in parameter_list_with_errs if i[0] is None]
     return _make_thin_composite_image(image_parameter_list_no_errs)
 
 
@@ -444,6 +443,7 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
     return Xnew - Anew
 
 
+@profile
 def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     """
     It works out the vectors needed for creating the camera images, using

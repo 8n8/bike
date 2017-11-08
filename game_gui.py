@@ -139,18 +139,23 @@ def pad_data(
 
 
 def i_for_n_seconds_ago(
-        timestamps: List[float],
+        timestamps: 'np.ndarray[np.float64]',
         n: float,
         now: float) -> int:
     """
     It finds the index of the timestamp that is close to being n
     seconds ago.
     """
-    available: List[bool] = [isclose(t, now - n) for t in timestamps]
-    for i, val in enumerate(available):
-        if val:
-            return i
-    return None
+    comparison = np.ones_like(timestamps)*(now - n)
+    matching = abs(timestamps - comparison) < 0.1
+    indices = matching.nonzero()
+    if len(indices[0]) == 0:
+        return None
+    return indices[0][0]
+    # for i, t in enumerate(timestamps):
+    #     if isclose(t, now - n): 
+    #         return i
+    # return None
 
 
 def isclose(a: float, b: float) -> bool:
@@ -159,7 +164,7 @@ def isclose(a: float, b: float) -> bool:
 
 def make_batch(
         ds: List[g.DataPoint],
-        timestamps: List[float],
+        timestamps: 'np.ndarray[np.float64]',
         i: int
         ) -> Tuple[str, 'np.ndarray[np.uint8]']:
     """
@@ -174,8 +179,8 @@ def make_batch(
     if any(nones):
         return "Not possible to make this batch.", None
     batch: List['np.ndarray[np.uint8]'] = [tr.worldstate2images(ds[i]['world']) for i in i_s]
-    print(len(batch))
-    return None, np.stack(batch, axis=2)  # type: ignore
+    result = None, np.stack(batch, axis=2)  # type: ignore
+    return result
 
 
 def convert_data(
@@ -192,8 +197,9 @@ def convert_data(
     timestamps: List[float] = [i['timestamp'] for i in data_batch]
     numpoints: int = len(timestamps)
     imbatches_with_errors_and_indices: IndexErrImage = []
+    np_timestamps = np.array(timestamps, dtype=np.float32)
     for i in range(numpoints):
-        batch = (i, make_batch(data_batch, timestamps, i))
+        batch = (i, make_batch(data_batch, np_timestamps, i))
         if batch[1][0] is None:
             imbatches_with_errors_and_indices.append(batch)
             break
@@ -219,7 +225,6 @@ def convert_data(
         'v_out': v_out})
 
 
-@profile
 def predict_velocity(
         ds: List[dg.DataPoint],
         timestep: float) -> Tuple[str, Velocity]:
@@ -302,7 +307,7 @@ class _World:
         self.time += self.timestep
         self.counter += 1
         if self.counter % 100 == 0:
-            chopped = self.data[-500:]
+            chopped = self.data[-300:]
             err, velocity = predict_velocity(
                 convert_data_points(chopped),
                 self.timestep)
