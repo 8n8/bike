@@ -72,14 +72,3 @@ def velnet():
     return k.models.Model(inputs=[imin, velin], outputs=[dense])
 
 
-def main():
-    iin = np.random.rand(1, 100, 4, 4)  # type: ignore
-    vin = np.random.rand(1, 2)  # type: ignore
-
-    start = time.time()
-    num = 100
-    model = velnet()
-    model.summary()
-    for _ in range(num):
-        model.predict({'image_in': iin, 'velocity_in': vin})
-    print((time.time() - start) / num)

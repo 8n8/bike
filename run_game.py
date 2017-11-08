@@ -14,8 +14,4 @@ init = g.WorldState(
     keyboard=g.KeyPress.NONE)
 
 
-g.main(
-    init,
-    0.01,
-    f.update_world,
-    f.world2view)
+g.main(init, 0.01, f.update_world, f.world2view)

@@ -138,6 +138,46 @@ def pad_data(
     return ds
 
 
+def i_for_n_seconds_ago(
+        timestamps: List[float],
+        n: float,
+        now: float) -> int:
+    """
+    It finds the index of the timestamp that is close to being n
+    seconds ago.
+    """
+    available: List[bool] = [isclose(t, now - n) for t in timestamps]
+    for i, val in enumerate(available):
+        if val:
+            return i
+    return None
+
+
+def isclose(a: float, b: float) -> bool:
+    return abs(a - b) < 0.1
+
+
+def make_batch(
+        ds: List[g.DataPoint],
+        timestamps: List[float],
+        i: int
+        ) -> Tuple[str, 'np.ndarray[np.uint8]']:
+    """
+    It makes a single data point for the neural network.  The
+    network takes in 5 images going back in time between 0.1
+    and 8.1 seconds.
+    """
+    now: float = timestamps[i]
+    times: List[float] = [2.7, 0.9, 0.3, 0.1]
+    i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now) for t in times]
+    nones: List[bool] = [i is None for i in i_s]
+    if any(nones):
+        return "Not possible to make this batch.", None
+    batch: List['np.ndarray[np.uint8]'] = [tr.worldstate2images(ds[i]['world']) for i in i_s]
+    print(len(batch))
+    return None, np.stack(batch, axis=2)  # type: ignore
+
+
 def convert_data(
         data_batch: List[g.DataPoint]
         ) -> Tuple[str, tr.TrainingData]:
@@ -145,16 +185,18 @@ def convert_data(
     It converts the data from the game format into numpy arrays
     ready for feeding into the neural network.
     """
-    ims: List['np.ndarray[np.uint8]'] = [
-        tr.worldstate2images(i['world']) for i in data_batch]
     vs: List['np.ndarray[np.float64]'] = [
         tr.velocity2array(i['world']['velocity']) for i in data_batch]
     target_vs: List['np.ndarray[np.float64]'] = [
         tr.velocity2array(i['target_velocity']) for i in data_batch]
     timestamps: List[float] = [i['timestamp'] for i in data_batch]
     numpoints: int = len(timestamps)
-    imbatches_with_errors_and_indices: IndexErrImage = [
-        (i, tr.make_batch(ims, timestamps, i)) for i in range(numpoints)]
+    imbatches_with_errors_and_indices: IndexErrImage = []
+    for i in range(numpoints):
+        batch = (i, make_batch(data_batch, timestamps, i))
+        if batch[1][0] is None:
+            imbatches_with_errors_and_indices.append(batch)
+            break
     i_s: Set[int] = {i for i, (err, _) in imbatches_with_errors_and_indices
                      if err is None}
     vs_used: List['np.ndarray[np.float64]'] = [
@@ -177,20 +219,17 @@ def convert_data(
         'v_out': v_out})
 
 
+@profile
 def predict_velocity(
         ds: List[dg.DataPoint],
         timestep: float) -> Tuple[str, Velocity]:
     err, dat = convert_data(ds)
     if err is not None:
         return err, None
-    print('in shape:')
-    print(dat['image_in'].shape)
     result = model.predict(
         {'image_in': dat['image_in'],
          'velocity_in': dat['v_in']},
         batch_size=1)
-    print("out shape:")
-    print(result.shape)
     return None, array2velocity(result)
 
 
@@ -263,13 +302,15 @@ class _World:
         self.time += self.timestep
         self.counter += 1
         if self.counter % 100 == 0:
+            chopped = self.data[-500:]
             err, velocity = predict_velocity(
-                convert_data_points(self.data),
+                convert_data_points(chopped),
                 self.timestep)
-            print(err)
             if err is None:
-                print('here')
                 self.state = update_velocity(velocity, self.state)
+        if self.counter > 1000:
+            print('ending')
+            return
         self.canvas.after(1, self.update)
 
     def keyboard_up(self, _):
