@@ -1,6 +1,4 @@
 + change the TypedDicts to NamedTuples where appropriate
-+ speed up neural net as much as poss:
-    + DONE change nn to take 4x4x100 arrays of bools instead of the 5x200x200x3 that it has now
-    + speed up data conversion
 + pylint everything
 + make all imports simple
++ speed up data conversion in the training module

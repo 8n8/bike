@@ -8,7 +8,14 @@ from mypy_extensions import TypedDict
 import numpy as np
 import os
 from typing import List, Set, Tuple  # noqa: F401
+import uuid
 import world2sensor as w
+
+
+class TrainingData(TypedDict):
+    image_in: 'np.ndarray[np.uint8]'
+    v_in: 'np.ndarray[np.float64]'
+    v_out: 'np.ndarray[np.float64]'
 
 
 def read_data_file(filepath: str) -> List[g.DataPoint]:
@@ -36,6 +43,32 @@ def read_data_batch(
             break
         used_data_files.append(filename)
         gathered_data += read_data_file('game_data/' + filename)
+    return None, used_data_files, gathered_data
+
+
+def read1npfile(filename: str) -> TrainingData:
+    dat = np.load(filename)
+    return {
+        'image_in': dat['arr_0'],
+        'v_in': dat['arr_1'],
+        'v_out': dat['arr_2']}
+
+
+def read_numpy_data(
+        used_data_files: List[str],
+        data_file_names: List[str]
+        ) -> Tuple[List[str], TrainingData]:
+    setunused: Set[str] = set(data_file_names)
+    setused: Set[str] = set(used_data_files)
+    if setunused == setused:
+        return "Data used up.", used_data_files, None
+    # gathered_data: List[TrainingData] = []
+    filename = list(setunused - setused)[0]
+    # for filename in setunused - setused:
+    #     if len(gathered_data) > 100:
+    #         break
+    gathered_data = read1npfile('game_data_np/' + filename)
+    used_data_files.append(filename)
     return None, used_data_files, gathered_data
 
 
@@ -88,12 +121,6 @@ def make_batch(
         return "Not possible to make this batch.", None
     batch: List['np.ndarray[np.uint8]'] = [ims[i] for i in i_s]
     return None, np.stack(batch, axis=2)  # type: ignore
-
-
-class TrainingData(TypedDict):
-    image_in: 'np.ndarray[np.uint8]'
-    v_in: 'np.ndarray[np.float64]'
-    v_out: 'np.ndarray[np.float64]'
 
 
 def velocity2array(v: g.Velocity) -> 'np.ndarray[np.float64]':
@@ -149,6 +176,7 @@ def convert_data(
     v_in: 'np.ndarray[np.float64]' = (
         np.stack(target_vs_used, axis=0))  # type: ignore
     v_out: 'np.ndarray[np.float64]' = np.stack(vs_used, axis=0)  # type: ignore
+    np.savez('game_data_np/' + str(uuid.uuid4()), image_in, v_in, v_out)
     return (None, {
         'image_in': image_in,
         'v_in': v_in,
@@ -159,7 +187,7 @@ def main():
     """
     It trains the neural network using the game data.
     """
-    data_file_names: List[str] = os.listdir('game_data')
+    data_file_names: List[str] = os.listdir('game_data_np')
     savenetfile: str = 'nav_net.h5'
     usedfilelistfile: str = 'used_files'
     if os.path.isfile(usedfilelistfile):
@@ -178,7 +206,7 @@ def main():
     training_cycle_num: int = 0
     while True:
         print('Reading data from files...')
-        err, used_data_files, data_batch = read_data_batch(
+        err, used_data_files, d = read_numpy_data(
             used_data_files, data_file_names)
         if err is not None:
             print(err)
@@ -188,10 +216,10 @@ def main():
             with open(usedfilelistfile, 'w') as ff:
                 json.dump(used_data_files, ff)
             return
-        print('Converting data...')
-        err, d = convert_data(data_batch)
-        if err is not None:
-            continue
+        # print('Converting data...')
+        # err, d = convert_data(data_batch)
+        # if err is not None:
+        #     continue
         print("Training cycle {}".format(training_cycle_num))
         training_cycle_num += 1
         model.fit(
