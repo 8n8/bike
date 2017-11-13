@@ -1,16 +1,17 @@
-import func_net
-from keras.models import load_model
-import numpy as np
+""" It works out the time taken to run the navigation neural network. """
+
 import time
+import conv_net
+import numpy as np
 
 num = 100
 
-iins = [np.random.rand(1, 100, 4, 4) for _ in range(num)]
-vins = [np.random.rand(1, 2) for _ in range(num)]
+iins = [np.random.rand(1, 100, 4, 4) for _ in range(num)]  # type: ignore
+vins = [np.random.rand(1, 2) for _ in range(num)]  # type: ignore
 
-model = load_model('nav_net_Adam_001_3e5_catcross.h5')
+model = conv_net.main()
 model.summary()
 start = time.time()
-for vin, iin in zip(vins, iins): 
+for vin, iin in zip(vins, iins):
     model.predict({'image_in': iin, 'velocity_in': vin})
 print((time.time() - start) / num)

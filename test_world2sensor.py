@@ -1,8 +1,12 @@
+""" It tests various functions from the 'world2sensor' module. """
+# pylint: disable=protected-access
+
 import math as m
 import world2sensor as s
 
 
 def test_rounded_image_parameters():
+    """ It tests the function that calculates the image parameters. """
     cam: s.CamSpec = {
         'position': {
             'x': 0,
@@ -25,6 +29,10 @@ def test_rounded_image_parameters():
 
 
 def test_width_of_camera_lens():
+    """
+    It tests the function that calculates the width of the
+    camera lens.
+    """
     cam: s.CamSpec = {
         'position': {
             'x': 0,
@@ -36,6 +44,11 @@ def test_width_of_camera_lens():
 
 
 def test_obstacle_image_parameters2():
+    """
+    It tests the function that calculates the image parameters.
+    It makes sure that obstacles that are out of sight give an
+    error.
+    """
     cam: s.CamSpec = {
         'position': {
             'x': 0,
@@ -57,6 +70,12 @@ def test_obstacle_image_parameters2():
 
 
 def test_calculate_ABCD_coords():
+    """
+    It tests the function that calculates the coordinates of
+    the four points of interest on the lens-line.  It makes
+    sure that obstacles that are out of sight cause an error
+    message.
+    """
     cam: s.CamSpec = {
         'position': {
             'x': 0,
@@ -78,6 +97,10 @@ def test_calculate_ABCD_coords():
 
 
 def test_flatten_points():
+    """
+    It tests the function that works out the positions
+    of the four points of interest on the lens line.
+    """
     points_in: s.FourPoints = {
         'A': {'x': -0.1, 'y': 0.1},
         'B': {'x': 0.021, 'y': 0.1},
@@ -91,6 +114,11 @@ def test_flatten_points():
 
 
 def test_compare_to_AD():
+    """
+    It tests the function that is used by the _flatten_points
+    function to find the positions of A, B, C and D along the
+    lens line.
+    """
     A = {'x': -0.1, 'y': 0.1}
     B = {'x': 0.021, 'y': 0.1}
     C = {'x': 0.11, 'y': 0.1}
@@ -101,5 +129,9 @@ def test_compare_to_AD():
     assert isclose(s._compare_to_AD(A, D, D), 0.2)
 
 
-def isclose(a, b):
+def isclose(a: float, b: float) -> bool:
+    """
+    It decides if two floats are close enough to each
+    other to be considered equal.
+    """
     return abs(a - b) < 0.01

@@ -3,35 +3,68 @@ It works out what the sensor readings should be, given the state of the
 simulated world.
 """
 
-
 import math as m
+from typing import Any, List, Tuple  # noqa: F401
 from mypy_extensions import TypedDict
 import numpy as np
-from typing import Any, List, NamedTuple, Tuple  # noqa: F401
 
 
 class ImageParameters(TypedDict):
+    """
+    It specifies the view of an obstacle from a camera.
+    :param x: The gap on the left of the obstacle.
+    :param y: The width of the obstacle.
+    """
     x: float
     y: float
 
 
 class RoundedImageParameters(TypedDict):
+    """
+    Like the TypedDict ImageParameters, but with ints instead of floats.
+    """
     x: int
     y: int
 
 
 class Vector(TypedDict):
+    """ A two-vector, used to represent positions and velocities etc. """
     x: float
     y: float
 
 
 class Obstacle(TypedDict):
+    """
+    It represents an obstacle.  An obstacle is a vertical cylinder,
+    of infinite height.
+    """
     position: Vector
     velocity: Vector
     radius: float
 
 
 class CamSpec(TypedDict):
+    """
+    It represents a camera.
+
+            lens
+        _____________
+        \     |     /
+         \    |    /
+          \  k|   /
+           \  |  /
+            \ | /
+             \|/
+              V
+
+    :param position: The position on the x, y plane of the inner
+        corner of the camera.
+    :param k: The distance between the inner corner of the camera
+        and the lens.
+    :param theta: The angle of the camera.
+    :param alpha: The global orientation of the centre of the camera
+        (the line marked k on the diagram above.
+    """
     position: Vector
     k: float
     theta: float
@@ -39,6 +72,15 @@ class CamSpec(TypedDict):
 
 
 class FourPoints(TypedDict):
+    """
+    It represents the positions of four points on the line that goes
+    along the camera lens.
+    :param A: Left-hand end of lens, looking from above.
+    :param D: Right-hand end of lens, looking from above.
+    :param B: Intersection of lens-line and line from camera centre to
+        left-hand side of obstacle.
+    :param C: As with B, but for the right-hand side of the obstacle.
+    """
     A: Vector
     B: Vector
     C: Vector
@@ -46,6 +88,12 @@ class FourPoints(TypedDict):
 
 
 class SixPoints(TypedDict):
+    """
+    It represents the positions of six points in the plane.
+    :param A, B, C, D: as in FourPoints
+    :param P: Furthest left visible point of the obstacle.
+    :param N: Furthest right visible point of the obstacle.
+    """
     A: Vector
     B: Vector
     C: Vector
@@ -55,6 +103,20 @@ class SixPoints(TypedDict):
 
 
 class BikeState(TypedDict):
+    """
+    It represents the state of the bicycle.
+    :param v: The velocity of the back-wheel contact point.
+    :param psi: The angle of the main frame with respect to the global
+        x-axis.
+    :param phi: The lean angle to the right with respect to the vertical.
+    :param phidot: The rate of change of phi with respect to time.
+    :param delta: The steering angle with respect to straight ahead.  A right
+        turn is positive.
+    :param deltadot: The rate of change of delta with respect to time.
+    :param Tdelta: The torque applied to the steering axis.
+    :param Tm: The drive torque.
+    :param position: The position of the back-wheel contact point.
+    """
     v: float
     psi: float
     phi: float
@@ -67,72 +129,31 @@ class BikeState(TypedDict):
 
 
 class WorldState(TypedDict):
+    """ It represents the state of the world. """
     bike: BikeState
     obstacles: List[Obstacle]
 
 
 class ImageSet(TypedDict):
+    """
+    It represents the set of images seen by the cameras at one point
+    in time.
+    """
     front: 'np.ndarray[Any]'
     left: 'np.ndarray[Any]'
     back: 'np.ndarray[Any]'
     right: 'np.ndarray[Any]'
 
 
-class SensorReadings(TypedDict):
-    cameras: ImageSet
-    velocity: float
-    lean_acceleration: float
-    steer: float
-    gps: Vector
-
-
 class AllCamSpecs(TypedDict):
+    """ The specifications of the the set of cameras. """
     front: CamSpec
     left: CamSpec
     back: CamSpec
     right: CamSpec
 
 
-def main(world_state: WorldState) -> SensorReadings:
-    """
-    Given the state of the simulated world, it works out what the
-    sensor readings should be.
-
-    It is assumed that the world
-    + is perfectly flat and smooth
-    + has obstacles moving around in it at constant velocity
-
-    All the obstacles are vertical cylinders to make it easier: they
-    look the same from all angles.  It is assumed that the cameras are
-    high enough off the ground and the obstacles are tall enough that
-    the obstacles always go from top to bottom of the images.  The only
-    thing that can change about an image of an object is its width and
-    horizontal position.
-
-    It is assumed that a camera is the size of geometric point and that
-    all the cameras are at the same place.  Each of the four cameras
-    have a viewing angle of 90 degrees and are arranged back-to-back so
-    that they collectively view 360 degrees.
-    """
-    return {
-        'cameras': _calculate_rgb_images(
-            world_state['obstacles'],
-            world_state['bike']['position']['x'],
-            world_state['bike']['position']['y'],
-            world_state['bike']['psi']),
-        'lean_acceleration': world_state['bike']['phidot'],
-        'steer': world_state['bike']['delta'],
-        'velocity': world_state['bike']['v'],
-        'gps': {
-            'x': world_state['bike']['position']['x'],
-            'y': world_state['bike']['position']['y']}}
-
-
-def _camera_properties(
-        x: float,
-        y: float,
-        orientation: float
-        ) -> AllCamSpecs:
+def _camera_properties(x: float, y: float, orientation: float) -> AllCamSpecs:
     """
     It is assumed that the cameras are all attached at the same point
     on the frame of the bike.
@@ -145,6 +166,7 @@ def _camera_properties(
 
 
 def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
+    """ It creates the specification of a camera. """
     return {
         'position': {'x': x, 'y': y},
         'k': 0.1,
@@ -152,12 +174,17 @@ def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
         'alpha': alpha}
 
 
-def _calculate_small_images(
+def calculate_small_images(
         obstacles: List[Obstacle],
         x: float,
         y: float,
-        orientation: float
-        ) -> ImageSet:
+        orientation: float) -> ImageSet:
+    """
+    It calculates the images of the surroundings for each of the four
+    cameras.  Since the world has no vertical variation and is black-and-
+    white, these images are expressed as 1 x 100 arrays of bools, with
+    0s for obstructions and 1s for free.
+    """
     cams: AllCamSpecs = _camera_properties(x, y, orientation)
     return {
         'front': _image_of_all_visible_obstacles(
@@ -170,34 +197,22 @@ def _calculate_small_images(
             cams['right'], obstacles)}
 
 
-def _calculate_rgb_images(
-        obstacles: List[Obstacle],
-        x: float,
-        y: float,
-        orientation: float
-        ) -> ImageSet:
+def calculate_rgb_images(ims: ImageSet) -> ImageSet:
     """
-    It calculates the image seen by each camera given the list of
-    obstacles in the simulated world and the position and orientation
-    of the cameras.  Each camera has a viewing angle of 90 degrees
-    and there are four of them back-to-back to view 360 degrees.
+    It converts the set of thin camera images, which are 1 x 100 arrays of
+    bools, into square RGB images that are 100 x 100 x 3 arrays of
+    unsigned 8-bit integers.
     """
-    cams: AllCamSpecs = _camera_properties(x, y, orientation)
     return {
-        'front': _thin_image_to_thick(_image_of_all_visible_obstacles(
-            cams['front'], obstacles)),
-        'left': _thin_image_to_thick(_image_of_all_visible_obstacles(
-            cams['left'], obstacles)),
-        'back': _thin_image_to_thick(_image_of_all_visible_obstacles(
-            cams['back'], obstacles)),
-        'right': _thin_image_to_thick(_image_of_all_visible_obstacles(
-            cams['right'], obstacles))}
+        'front': _thin_image_to_thick(ims['front']),
+        'left': _thin_image_to_thick(ims['left']),
+        'back': _thin_image_to_thick(ims['back']),
+        'right': _thin_image_to_thick(ims['right'])}
 
 
 def _image_of_all_visible_obstacles(
         cam_spec: CamSpec,
-        obstacle_list: List[Obstacle]
-        ) -> 'np.ndarray[Any]':
+        obstacle_list: List[Obstacle]) -> 'np.ndarray[Any]':
     """
     It makes an image of all the obstacles that are in the view of
     the camera.  The parameters describing the camera are contained
@@ -212,8 +227,7 @@ def _image_of_all_visible_obstacles(
 
 
 def _thin_image_to_thick(
-        thin_im: 'np.ndarray[bool]'
-        ) -> 'np.ndarray[np.uint8]':
+        thin_im: 'np.ndarray[bool]') -> 'np.ndarray[np.uint8]':
     """
     It converts a 1D array of bools into a 3D array representing a 2D
     RGB image.  Ones are white, zeros are black.  The original array
@@ -230,9 +244,11 @@ def _thin_image_to_thick(
     return as_uint8 * 255
 
 
+Params = List[RoundedImageParameters]
+
+
 def _make_thin_composite_image(
-        image_parameter_list: List[RoundedImageParameters]
-        ) -> 'np.ndarray[bool]':
+        image_parameter_list: Params) -> 'np.ndarray[bool]':
     """
     It makes an array of bools, representing the image of all the
     obstacles seen by the camera.  The input is a list of dictionaries,
@@ -264,12 +280,15 @@ def _make_thin_image(x: float, y: float) -> 'np.ndarray[bool]':
 
 def _rounded_image_parameters(
         cam: CamSpec,
-        obs: Obstacle
-        ) -> Tuple[str, RoundedImageParameters]:
+        obs: Obstacle) -> Tuple[str, RoundedImageParameters]:
     """ It makes the image parameters into an int between 0 and 100. """
     z: float = _width_of_camera_lens(cam)
 
     def n(a):
+        """
+        It normalises the image parameter to be a number between 0 and
+        100.
+        """
         return int(a * 100 / z)
 
     err, parameters = _obstacle_image_parameters(cam, obs)
@@ -283,8 +302,7 @@ def _rounded_image_parameters(
 
 def _obstacle_image_parameters(
         cam: CamSpec,
-        obs: Obstacle
-        ) -> Tuple[str, ImageParameters]:
+        obs: Obstacle) -> Tuple[str, ImageParameters]:
     """
     It takes in the position and orientation of a camera, and the
     position of an obstacle and calculates the parameters needed to
@@ -335,8 +353,7 @@ def _width_of_camera_lens(cam: CamSpec) -> float:
 
 def _calculate_ABCD_coords(
         cam: CamSpec,
-        obs: Obstacle,
-        ) -> Tuple['str', FourPoints]:
+        obs: Obstacle) -> Tuple['str', FourPoints]:
     """
     It calculates the coordinates of the points A, B, C and D, which
     are points along the lens-line of the camera.  They are shown on
@@ -361,12 +378,18 @@ def _calculate_ABCD_coords(
 
 
 def vectorSum(a: Vector, b: Vector) -> Vector:
+    """ It calculates the sum of two two-vectors. """
     return {
         'x': a['x'] + b['x'],
         'y': a['y'] + b['y']}
 
 
 class FlatPoints(TypedDict):
+    """
+    It specifies the positions of the four points defined in FourPoints,
+    with respect to the line through A and D.  A is at zero and D is on
+    the positive side.
+    """
     A: float
     B: float
     C: float
@@ -382,6 +405,11 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
     D on the positive side of A.
     """
     def flatten(point: Vector) -> float:
+        """
+        It calculates the position of the point on the line that passes
+        through A and D, with A at zero and D on the positive side of A.
+        It assumes that the point is on the line.
+        """
         return _compare_to_AD(points['A'], points['D'], point)
     Bflat: float = flatten(points['B'])
     Cflat: float = flatten(points['C'])
@@ -437,6 +465,10 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
     #     rot12 = sin(ϴ)
 
     def flatten(p: Vector) -> float:
+        """
+        It rotates the vector so it lies along the x-axis, and returns its
+        x-coordinate.
+        """
         return cosangle * p['x'] + sinangle * p['y']
 
     Anew, Xnew = flatten(A), flatten(X)

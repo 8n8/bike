@@ -1,4 +1,6 @@
 + change the TypedDicts to NamedTuples where appropriate
 + pylint everything
 + make all imports simple
-+ speed up data conversion in the training module
++ make neural network also have the current velocity as its input
++ make automatic nn evaluator
++ evaluate my performance to compare with

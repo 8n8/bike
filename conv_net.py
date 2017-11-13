@@ -1,6 +1,7 @@
+""" It builds the navigation neural network. """
+
+
 import keras as k  # type: ignore
-import numpy as np
-import time
 
 
 conv1 = k.layers.convolutional.Conv2D(
@@ -62,7 +63,8 @@ dense3 = k.layers.Dense(2, activation='softmax')
 bn = k.layers.BatchNormalization
 
 
-def velnet():
+def main():
+    """ It creates the neural network. """
     imin = k.layers.Input(shape=(100, 4, 4), name='image_in')
     velin = k.layers.Input(shape=(2,), name='velocity_in')
     conv = flat(bn()(conv6(bn()(conv5(bn()(conv4(bn()(conv3(
@@ -70,5 +72,3 @@ def velnet():
     midin = k.layers.concatenate([conv, velin])
     dense = dense3(bn()(dense2(bn()(dense1(bn()(midin))))))
     return k.models.Model(inputs=[imin, velin], outputs=[dense])
-
-
