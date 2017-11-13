@@ -131,6 +131,7 @@ def velocity2array(v: g.Velocity) -> 'np.ndarray[np.float64]':
 
 def _update_velocity_auto(
         target_velocity: g.Velocity,
+        current_velocity: g.Velocity,
         recent_images: 'np.ndarray[bool]',
         model) -> g.Velocity:
     """ It changes the velocity using the neural network. """
@@ -138,6 +139,9 @@ def _update_velocity_auto(
         {'image_in': np.expand_dims(recent_images, axis=0),  # type: ignore
          'velocity_in': np.expand_dims(  # type: ignore
              velocity2array(target_velocity),
+             axis=0),
+         'target_in': np.expand_dims(  # type: ignore
+             velocity2array(current_velocity),
              axis=0)},
         batch_size=1))
 
@@ -199,7 +203,7 @@ def update_world(
     if mode == Mode.AUTO:
         if err is None:
             velocity: g.Velocity = _update_velocity_auto(
-                init.target_velocity, recent_images, model)
+                init.target_velocity, init.velocity, recent_images, model)
         else:
             velocity = init.velocity
     if mode == Mode.MANUAL:

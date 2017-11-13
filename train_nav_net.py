@@ -4,6 +4,7 @@ from typing import List, Set, Tuple  # noqa: F401
 import os
 import json
 import conv_net as f
+import evaluate_net
 import game_gui as g
 from keras.optimizers import Adam  # type: ignore
 from keras.models import load_model  # type: ignore
@@ -80,4 +81,5 @@ def main():
             epochs=1)
         with open(used_file_list, 'w') as ff:
             json.dump(used_data_files, ff)
+        print('score: {}'.format(evaluate_net.main(model)))
         model.save(saved_net_file)
