@@ -1,5 +1,5 @@
 """
-It works out what the sensor readings should be, given the state of the
+It works out what the camera images should be, given the state of the
 simulated world.
 """
 

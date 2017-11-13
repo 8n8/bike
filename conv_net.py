@@ -67,8 +67,9 @@ def main():
     """ It creates the neural network. """
     imin = k.layers.Input(shape=(100, 4, 4), name='image_in')
     velin = k.layers.Input(shape=(2,), name='velocity_in')
+    targetin = k.layers.Input(shape=(2,), name='target_in')
     conv = flat(bn()(conv6(bn()(conv5(bn()(conv4(bn()(conv3(
         bn()(conv2(bn()(conv1(bn()(imin))))))))))))))
-    midin = k.layers.concatenate([conv, velin])
+    midin = k.layers.concatenate([conv, targetin, velin])
     dense = dense3(bn()(dense2(bn()(dense1(bn()(midin))))))
-    return k.models.Model(inputs=[imin, velin], outputs=[dense])
+    return k.models.Model(inputs=[imin, targetin, velin], outputs=[dense])

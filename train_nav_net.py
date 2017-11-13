@@ -19,7 +19,8 @@ def read_one_numpy_file(filename: str) -> g.DataSet:
     return g.DataSet(
         images=dat['arr_0'],
         target_velocity=dat['arr_1'],
-        velocity_out=dat['arr_2'])
+        velocity_in=dat['arr_2'],
+        velocity_out=dat['arr_3'])
 
 
 def read_numpy_data(
@@ -71,7 +72,9 @@ def main():
         print("Training cycle {}".format(training_cycle_num))
         training_cycle_num += 1
         model.fit(
-            {'image_in': d.images, 'velocity_in': d.target_velocity},
+            {'image_in': d.images,
+             'velocity_in': d.velocity_in,
+             'target_in': d.target_velocity},
             d.velocity_out,
             batch_size=1000,
             epochs=1)

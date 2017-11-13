@@ -111,6 +111,7 @@ class DataSet(NamedTuple):
     """ It represents a whole game's worth of data. """
     images: 'np.ndarray[bool]'  # n x 100 x 4 x 4
     target_velocity: 'np.ndarray[np.float64]'  # n x 2
+    velocity_in: 'np.ndarray[np.float64]'  # n x 2
     velocity_out: 'np.ndarray[np.float64]'  # n x 2
 
 
@@ -125,10 +126,12 @@ def prepare_for_save(
                     if element is not None]
     target_velocities = [history[i].target_velocity for i in good_indices]
     velocity_outs = [history[i].velocity for i in good_indices]
+    velocity_ins = [Velocity(speed=0, angle=0)] + velocity_outs[:-1]
     images = [recent_images_set[i] for i in good_indices]
     return DataSet(
         target_velocity=np.stack(target_velocities, axis=0),  # type: ignore
         velocity_out=np.stack(velocity_outs, axis=0),  # type: ignore
+        velocity_in=np.stack(velocity_ins, axis=0),  # type: ignore
         images=np.stack(images, axis=0))  # type: ignore
 
 
@@ -213,7 +216,7 @@ class _World:
         filename: str = 'game_data/' + str(uuid.uuid4())
         dat: DataSet = prepare_for_save(self.recent_images, self.history)
         np.savez(filename, dat.images, dat.target_velocity,
-                 dat.velocity_out)
+                 dat.velocity_in, dat.velocity_out)
 
 
 def main(
