@@ -153,50 +153,7 @@ class AllCamSpecs(TypedDict):
     right: CamSpec
 
 
-<<<<<<< HEAD
-def main(world_state: WorldState) -> SensorReadings:
-    """
-    Given the state of the simulated world, it works out what the
-    sensor readings should be.
-
-    It is assumed that the world
-    + is perfectly flat and smooth
-    + has obstacles moving around in it at constant velocity
-
-    All the obstacles are vertical cylinders to make it easier: they
-    look the same from all angles.  It is assumed that the cameras are
-    high enough off the ground and the obstacles are tall enough that
-    the obstacles always go from top to bottom of the images.  The only
-    thing that can change about an image of an object is its width and
-    horizontal position.
-
-    It is assumed that a camera is the size of geometric point and that
-    all the cameras are at the same place.  Each of the four cameras
-    have a viewing angle of 90 degrees and are arranged back-to-back so
-    that they collectively view 360 degrees.
-    """
-    return {
-        'cameras': calculate_images(
-            world_state['obstacles'],
-            world_state['bike']['position']['x'],
-            world_state['bike']['position']['y'],
-            world_state['bike']['psi']),
-        'lean_acceleration': world_state['bike']['phidot'],
-        'steer': world_state['bike']['delta'],
-        'velocity': world_state['bike']['v'],
-        'gps': {
-            'x': world_state['bike']['position']['x'],
-            'y': world_state['bike']['position']['y']}}
-
-
-def _camera_properties(
-        x: float,
-        y: float,
-        orientation: float
-        ) -> AllCamSpecs:
-=======
 def _camera_properties(x: float, y: float, orientation: float) -> AllCamSpecs:
->>>>>>> erlnet
     """
     It is assumed that the cameras are all attached at the same point
     on the frame of the bike.
@@ -217,11 +174,7 @@ def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
         'alpha': alpha}
 
 
-<<<<<<< HEAD
-def calculate_images(
-=======
 def calculate_small_images(
->>>>>>> erlnet
         obstacles: List[Obstacle],
         x: float,
         y: float,
