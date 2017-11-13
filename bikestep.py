@@ -9,10 +9,10 @@ bikeproject/simulateWorld/bikestep/main.tex.
 
 
 import math as m
-import world2sensor as w
+from typing import List
+import world2sensor as s
 from mypy_extensions import TypedDict
 from scipy.integrate import odeint  # type: ignore
-from typing import List
 
 
 # The matrix elements for the bicycle equation of motion.  These are
@@ -39,7 +39,7 @@ k4: float = 2.654_315_237_946_04
 m2xm3_m1xm4: float = m2 * m3 - m1 * m4
 
 
-def _p2dot(b: w.BikeState) -> float:
+def _p2dot(b: s.BikeState) -> float:
     """
     This equation is the one for dp_2/dt taken from the main
     documentation for this module.  Briefly, it is one of the
@@ -49,14 +49,17 @@ def _p2dot(b: w.BikeState) -> float:
     """
     return (
         -(-b['delta'] * h2 * m4 + (h3 * m2 - h1 * m4) * b['phi'] + m2
-          * (b['delta'] * h4 - b['Tdelta']) + ((c3 * m2 - c1 * m4)
-          * b['phidot'] - c2 * b['deltadot'] * m4 + c4 * b['deltadot']
-          * m2) * b['v'] + ((k3 * m2 - k1 * m4) * b['phi'] - b['delta']
-          * k2 * m4 + b['delta'] * k4 * m2) * b['v']**2)
+          * (b['delta'] * h4 - b['Tdelta'])
+          + ((c3 * m2 - c1 * m4) * b['phidot'] - c2 * b['deltadot'] * m4
+             + c4 * b['deltadot'] * m2)
+          * b['v']
+          + ((k3 * m2 - k1 * m4) * b['phi'] - b['delta'] * k2 * m4
+             + b['delta'] * k4 * m2)
+          * b['v']**2)
         / m2xm3_m1xm4)
 
 
-def _d2dot(b: w.BikeState) -> float:
+def _d2dot(b: s.BikeState) -> float:
     """
     This equation is the one for dd_2/dt taken from the main docs
     for this module.  d_2 is the same as d delta / dt.
@@ -66,14 +69,18 @@ def _d2dot(b: w.BikeState) -> float:
          * (b['delta'] * h4 - b['Tdelta']) +
          ((c3 * m1 - c1 * m3) * b['phidot'] - c2 * b['deltadot'] * m3
           + c4 * b['deltadot'] * m1)
-         * b['v'] + ((k3 * m1 - k1 * m3) * b['phi'] - b['delta']
-         * k2 * m3 + b['delta'] * k4 * m1) * b['v']**2)
+         * b['v'] +
+         ((k3 * m1 - k1 * m3) * b['phi'] - b['delta'] * k2 * m3
+          + b['delta'] * k4 * m1)
+         * b['v']**2)
         / m2xm3_m1xm4)
 
 
-# It represents the set of first-order derivatives that are later
-# on fed into the ode solver.
 class Derivatives(TypedDict):
+    """
+    It represents the set of first-order derivatives that are later
+    on fed into the ode solver.
+    """
     phidot: float
     deltadot: float
     p2dot: float
@@ -99,7 +106,7 @@ def _derivatives2list(d: Derivatives) -> List[float]:
         d['ydot']]
 
 
-def _list2bikestate(L: List['float'], v, Tdelta, Tm) -> w.BikeState:
+def _list2bikestate(L: List['float'], v, Tdelta, Tm) -> s.BikeState:
     """
     A converter from a list representing most of the bike state to
     the bikestate dictionary.  This is necessary because the scipy
@@ -149,7 +156,7 @@ def _calculate_velocity(Tm: float, t: float, v0: float) -> float:
     return ((Tm * t) / 32.9) + v0
 
 
-def _derivatives(b: w.BikeState, t: float) -> Derivatives:
+def _derivatives(b: s.BikeState) -> Derivatives:
     """
     It calculates a set of six first-order derivatives.  The
     equations for these derivatives are derived from the bike
@@ -176,22 +183,21 @@ def _derivatives(b: w.BikeState, t: float) -> Derivatives:
 
 def _derivList(
         L: List[float],
-        t: float,
+        _: float,
         v: float,
         Tdelta: float,
-        Tm: float
-        ) -> List[float]:
+        Tm: float) -> List[float]:
     """
     It takes in a list of the bike parameters and calculates the
     gradients at that point.  The scipy module's ode solver requires
     a function in this specific form for its first input.
     """
-    b: w.BikeState = _list2bikestate(L, v, Tdelta, Tm)
-    derivs: Derivatives = _derivatives(b, t)
+    b: s.BikeState = _list2bikestate(L, v, Tdelta, Tm)
+    derivs: Derivatives = _derivatives(b)
     return _derivatives2list(derivs)
 
 
-def _make_initial_conditions(b: w.BikeState) -> List[float]:
+def _make_initial_conditions(b: s.BikeState) -> List[float]:
     """
     It extracts the initial conditions in the form of a list of
     floats, using the dictionary containing the bike state.  A list
@@ -207,7 +213,7 @@ def _make_initial_conditions(b: w.BikeState) -> List[float]:
         b['position']['y']]
 
 
-def main(b: w.BikeState, t: float) -> w.BikeState:
+def main(b: s.BikeState, t: float) -> s.BikeState:
     """
     This is the only function exported by this module.  Given the
     current state of the bicycle and a time period, it calculates
