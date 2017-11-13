@@ -115,7 +115,7 @@ def main(world_state: WorldState) -> SensorReadings:
     that they collectively view 360 degrees.
     """
     return {
-        'cameras': _calculate_images(
+        'cameras': calculate_images(
             world_state['obstacles'],
             world_state['bike']['position']['x'],
             world_state['bike']['position']['y'],
@@ -152,7 +152,7 @@ def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
         'alpha': alpha}
 
 
-def _calculate_images(
+def calculate_images(
         obstacles: List[Obstacle],
         x: float,
         y: float,
