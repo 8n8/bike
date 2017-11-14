@@ -1,4 +1,5 @@
 import math as m
+import world2sensor as w
 
 
 def main(double k1, double k2, double n1, double n2, double r, double t1, double t2, double theta):
@@ -70,58 +71,58 @@ def main(double k1, double k2, double n1, double n2, double r, double t1, double
         + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1
         + 2*k1*k2*t1*t2 + k22*n22 - 2*k22*n2*t2
         - k22*r2 + k22*t22)
-    return {
-        'P': {
-            'x': (r*(-n1*r - n2*sqrt + r*t1 + t2*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
-            'y': (-r*(r*(n2 - t2) - (n1 - t1)*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
-        'Q': {
-            'x': (r*(-n1*r + n2*sqrt + r*t1 - t2*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
-            'y': (-r*(r*(n2 - t2) + (n1 - t1) * sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
-        'A': {
-            'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-            'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta},
-        'B': {
-            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
-                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
-                   - k12*k2*r
-                   * sqrt
-                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
-                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
-                   - k23*n1*t2 - k23*n2*t1 - k23*r
-                   * sqrt
-                   + k23*t1*t2)
-                  / BCdenominator),
-            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 + k13*r
-                   * sqrt
-                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
-                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
-                   - k1*k22*n1*t2 - k1*k22*n2*t1 + k1*k22*r
-                   * sqrt
-                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
-                   - k23*r2 + k23*t22)
-                  / BCdenominator)},
-        'C': {
-            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
-                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
-                   + k12*k2*r*sqrt
-                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
-                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
-                   - k23*n1*t2 - k23*n2*t1 + k23*r*sqrt
-                   + k23*t1*t2)
-                  / BCdenominator),
-            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 - k13*r
-                   * sqrt
-                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
-                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
-                   - k1*k22*n1*t2 - k1*k22*n2*t1 - k1*k22*r
-                   * sqrt
-                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
-                   - k23*r2 + k23*t22)
-                  / BCdenominator)},
-        'D': {
-            'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-            'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}}
+    return w.SixPoints(
+        P=w.Vector(
+            x=(r*(-n1*r - n2*sqrt + r*t1 + t2*sqrt)
+               / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
+            y=(-r*(r*(n2 - t2) - (n1 - t1)*sqrt)
+               / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))),
+        Q=w.Vector(
+            x=(r*(-n1*r + n2*sqrt + r*t1 - t2*sqrt)
+               / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
+            y=(-r*(r*(n2 - t2) + (n1 - t1) * sqrt)
+                / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))),
+        A=w.Vector(
+            x=k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+            y=k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta),
+        B=w.Vector(
+            x=((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
+                + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
+                - k12*k2*r
+                * sqrt
+                + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
+                - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
+                - k23*n1*t2 - k23*n2*t1 - k23*r
+                * sqrt
+                + k23*t1*t2)
+               / BCdenominator),
+            y=((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 + k13*r
+                * sqrt
+                + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
+                - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
+                - k1*k22*n1*t2 - k1*k22*n2*t1 + k1*k22*r
+                * sqrt
+                + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
+                - k23*r2 + k23*t22)
+               / BCdenominator)),
+        C=w.Vector(
+            x=((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
+                + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
+                + k12*k2*r*sqrt
+                + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
+                - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
+                - k23*n1*t2 - k23*n2*t1 + k23*r*sqrt
+                + k23*t1*t2)
+               / BCdenominator),
+            y=((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 - k13*r
+                * sqrt
+                + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
+                - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
+                - k1*k22*n1*t2 - k1*k22*n2*t1 - k1*k22*r
+                * sqrt
+                + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
+                - k23*r2 + k23*t22)
+               / BCdenominator)),
+        D=w.Vector(
+            x=k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
+            y=k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta))

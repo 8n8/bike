@@ -253,7 +253,7 @@ def _make_thin_composite_image(
     """
     im: 'np.ndarray[bool]' = np.ones(100, dtype=bool)
     for i in image_parameter_list:
-        im = im * _make_thin_image(i['x'], i['y'])  # type: ignore
+        im = im * _make_thin_image(i.x, i.y)  # type: ignore
     return im
 
 
@@ -461,7 +461,7 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
     return Xnew - Anew
 
 
-def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
+def _solve_geometry(cam: CamSpec, obs: Obstacle):
     """
     It works out the vectors needed for creating the camera images, using
     the configuration of the camera and the position of the obstacle.
