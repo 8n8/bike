@@ -24,7 +24,7 @@ def _squared_distance_between(a: s.Vector, b: s.Vector) -> float:
 def _crashed_into_obstacle(position, obstacles) -> bool:
     """ It works out if the robot has crashed into an obstacle. """
     return any([
-        _squared_distance_between(position, o.position) < 4
+        _squared_distance_between(position, o['position']) < 4
         for o in obstacles])
 
 
