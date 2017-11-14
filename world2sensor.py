@@ -475,6 +475,7 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
     return Xnew - Anew
 
 
+@profile
 def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     """
     It works out the vectors needed for creating the camera images, using

@@ -1,6 +1,2 @@
-+ change the TypedDicts to NamedTuples where appropriate
-+ pylint everything
-+ make all imports simple
-+ make neural network also have the current velocity as its input
-+ make automatic nn evaluator
-+ evaluate my performance to compare with
++ do a graphical profile of nn evaluator
++ rewrite solve_geometry in C if it is the bottleneck

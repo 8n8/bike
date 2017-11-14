@@ -11,13 +11,6 @@ import update_obstacle_pop as u
 import world2sensor as w
 
 
-MODEL_FILE: str = 'nav_net.h5'
-
-
-if os.path.isfile(MODEL_FILE):
-    MODEL = load_model(MODEL_FILE)
-else:
-    MODEL = None
 
 
 class Velocity(NamedTuple):
@@ -135,6 +128,9 @@ def prepare_for_save(
         images=np.stack(images, axis=0))  # type: ignore
 
 
+MODEL_FILE: str = 'nav_net.h5'
+
+
 class _World:
     """
     It holds the state of the world and various functions for updating it.
@@ -155,6 +151,10 @@ class _World:
         self.time = 0
         self.imref = []  # type: ignore
         self.recent_images: List['np.ndarray[bool]'] = []
+        if os.path.isfile(MODEL_FILE):
+            self.model = load_model(MODEL_FILE)
+        else:
+            self.model = None
 
     def update(self):
         """ It updates the gui window and the world state. """
@@ -190,7 +190,7 @@ class _World:
             self.history,
             u.generate_params(),
             self.timestep,
-            MODEL)
+            self.model)
         self.recent_images.append(recent_images)
         self.time += self.timestep
         self.canvas.after(int(1000 * self.timestep), self.update)
