@@ -7,6 +7,7 @@ import math as m
 from typing import Any, List, Tuple  # noqa: F401
 from mypy_extensions import TypedDict
 import numpy as np
+import solve_geometry_core
 
 
 class ImageParameters(TypedDict):
@@ -475,7 +476,6 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
     return Xnew - Anew
 
 
-@profile
 def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     """
     It works out the vectors needed for creating the camera images, using
@@ -528,80 +528,10 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     solution files end in 'txt'.
     """
     t1: float = cam['position']['x']
-    t12: float = t1**2
     t2: float = cam['position']['y']
-    t22: float = t2**2
     n1: float = obs['position']['x']
-    n12: float = n1**2
     n2: float = obs['position']['y']
-    n22: float = n2**2
     k1: float = cam['k'] * m.cos(cam['alpha'])
-    k12: float = k1**2
-    k13: float = k1**3
     k2: float = cam['k'] * m.sin(cam['alpha'])
-    k22: float = k2**2
-    k23: float = k2**3
     r: float = obs['radius']
-    r2: float = r**2
-    cos_half_theta: float = m.cos(cam['theta']/2)
-    sqrt = m.sqrt(n12 - 2*n1*t1 + n22 - 2*n2*t2 - r2 + t12 + t22)
-    BCdenominator: float = (
-        k12*n12 - 2*k12*n1*t1 - k12*r2 + k12*t12
-        + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1
-        + 2*k1*k2*t1*t2 + k22*n22 - 2*k22*n2*t2
-        - k22*r2 + k22*t22)
-    return {
-        'P': {
-            'x': (r*(-n1*r - n2*sqrt + r*t1 + t2*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
-            'y': (-r*(r*(n2 - t2) - (n1 - t1)*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
-        'Q': {
-            'x': (r*(-n1*r + n2*sqrt + r*t1 - t2*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
-            'y': (-r*(r*(n2 - t2) + (n1 - t1) * sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
-        'A': {
-            'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-            'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta},
-        'B': {
-            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
-                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
-                   - k12*k2*r
-                   * sqrt
-                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
-                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
-                   - k23*n1*t2 - k23*n2*t1 - k23*r
-                   * sqrt
-                   + k23*t1*t2)
-                  / BCdenominator),
-            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 + k13*r
-                   * sqrt
-                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
-                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
-                   - k1*k22*n1*t2 - k1*k22*n2*t1 + k1*k22*r
-                   * sqrt
-                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
-                   - k23*r2 + k23*t22)
-                  / BCdenominator)},
-        'C': {
-            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
-                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
-                   + k12*k2*r*sqrt
-                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
-                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
-                   - k23*n1*t2 - k23*n2*t1 + k23*r*sqrt
-                   + k23*t1*t2)
-                  / BCdenominator),
-            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 - k13*r
-                   * sqrt
-                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
-                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
-                   - k1*k22*n1*t2 - k1*k22*n2*t1 - k1*k22*r
-                   * sqrt
-                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
-                   - k23*r2 + k23*t22)
-                  / BCdenominator)},
-        'D': {
-            'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-            'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}}
+    return solve_geometry_core.main(k1, k2, n1, n2, r, t1, t2, cam['theta'])
