@@ -3,5 +3,5 @@ from Cython.Build import cythonize
 
 setup(
     name = 'Speed up solve_geometry.',
-    ext_modules = cythonize('compare_to_AD.pyx'))
+    ext_modules = cythonize('rounded_image_parameters.pyx'))
 

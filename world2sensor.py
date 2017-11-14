@@ -7,7 +7,7 @@ import math as m
 from typing import Any, List, Tuple  # noqa: F401
 from mypy_extensions import TypedDict
 import numpy as np
-import solve_geometry_core
+import rounded_image_parameters
 import compare_to_AD
 
 
@@ -221,7 +221,17 @@ def _image_of_all_visible_obstacles(
     in variable 'cam_spec'.
     """
     parameter_list_with_errs: List[Tuple[str, RoundedImageParameters]] = [
-        _rounded_image_parameters(cam_spec, obstacle)
+        rounded_image_parameters.main(
+            cam_spec['position']['x'],
+            cam_spec['position']['y'],
+            cam_spec['k'],
+            cam_spec['theta'],
+            cam_spec['alpha'],
+            obstacle['position']['x'],
+            obstacle['position']['y'],
+            obstacle['velocity']['x'],
+            obstacle['velocity']['y'],
+            obstacle['radius'])
         for obstacle in obstacle_list]
     image_parameter_list_no_errs: List[RoundedImageParameters] = [
         i[1] for i in parameter_list_with_errs if i[0] is None]
@@ -431,56 +441,6 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
         'B': Bflat,
         'C': Cflat,
         'D': Dflat}
-
-
-def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
-    """
-    Each of the inputs contains two coordinates describing a point in
-    a 2D Cartesian coordinate system.  All three points are on the same
-    line.
-
-    The function calculates where point X is on the real number line
-    defined by points A and D where A is at zero and D is on the
-    positive side of A.
-
-    Let the straight line be y = mx + c where m is the gradient and
-    c is the y-intercept.  The method used here is to first translate
-    the line downwards by c, then rotate clockwise about the origin by
-    arctan(m).  This leaves the length of the line unchanged, but
-    positions it on the x-axis.  Then the y-coordinates of A, B, C and
-    D can be ignored and the x-coordinates are used as the number line.
-    """
-    if m.isclose(D['x'], A['x']):
-        # The line is vertical.
-        return X['y'] - A['y']
-    gradient: float = (D['y'] - A['y']) / (D['x'] - A['x'])
-    angle: float = m.atan(gradient)
-    cosangle = m.cos(angle)
-    sinangle = m.sin(angle)
-    # The rotated point is found by multiplying it by the rotation
-    # matrix:
-    #
-    # [rot11 rot12] [p1] = [rot11 * p1 + rot12 * p2]
-    # [rot21 rot22] [p2]   [rot21 * p1 + rot22 * p2]
-    #
-    # The y-coordinate is thrown away, so the wanted result is
-    #
-    #     rot11 * p1 + rot12 * p2
-    #
-    # In this case:
-    #
-    #     rot11 = cos(ϴ)
-    #     rot12 = sin(ϴ)
-
-    def flatten(p: Vector) -> float:
-        """
-        It rotates the vector so it lies along the x-axis, and returns its
-        x-coordinate.
-        """
-        return cosangle * p['x'] + sinangle * p['y']
-
-    Anew, Xnew = flatten(A), flatten(X)
-    return Xnew - Anew
 
 
 def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
