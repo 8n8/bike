@@ -8,6 +8,7 @@ from typing import Any, List, Tuple  # noqa: F401
 from mypy_extensions import TypedDict
 import numpy as np
 import solve_geometry_core
+import compare_to_AD
 
 
 class ImageParameters(TypedDict):
@@ -411,7 +412,13 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
         through A and D, with A at zero and D on the positive side of A.
         It assumes that the point is on the line.
         """
-        return _compare_to_AD(points['A'], points['D'], point)
+        return compare_to_AD.main(
+            points['A']['x'],
+            points['A']['y'],
+            points['D']['x'],
+            points['D']['y'],
+            point['x'],
+            point['y'])
     Bflat: float = flatten(points['B'])
     Cflat: float = flatten(points['C'])
     Dflat: float = flatten(points['D'])
