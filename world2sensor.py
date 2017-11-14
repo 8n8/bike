@@ -4,12 +4,13 @@ simulated world.
 """
 
 import math as m
-from typing import Any, List, Tuple, NamedTuple  # noqa: F401
+from typing import Any, List, Tuple  # noqa: F401
+from mypy_extensions import TypedDict
 import numpy as np
-import solve_geometry_core  # type: ignore
+import solve_geometry_core
 
 
-class ImageParameters(NamedTuple):
+class ImageParameters(TypedDict):
     """
     It specifies the view of an obstacle from a camera.
     :param x: The gap on the left of the obstacle.
@@ -19,21 +20,21 @@ class ImageParameters(NamedTuple):
     y: float
 
 
-class RoundedImageParameters(NamedTuple):
+class RoundedImageParameters(TypedDict):
     """
-    Like the NamedTuple ImageParameters, but with ints instead of floats.
+    Like the TypedDict ImageParameters, but with ints instead of floats.
     """
     x: int
     y: int
 
 
-class Vector(NamedTuple):
+class Vector(TypedDict):
     """ A two-vector, used to represent positions and velocities etc. """
     x: float
     y: float
 
 
-class Obstacle(NamedTuple):
+class Obstacle(TypedDict):
     """
     It represents an obstacle.  An obstacle is a vertical cylinder,
     of infinite height.
@@ -43,7 +44,7 @@ class Obstacle(NamedTuple):
     radius: float
 
 
-class CamSpec(NamedTuple):
+class CamSpec(TypedDict):
     """
     It represents a camera.
 
@@ -71,7 +72,7 @@ class CamSpec(NamedTuple):
     alpha: float
 
 
-class FourPoints(NamedTuple):
+class FourPoints(TypedDict):
     """
     It represents the positions of four points on the line that goes
     along the camera lens.
@@ -87,7 +88,7 @@ class FourPoints(NamedTuple):
     D: Vector
 
 
-class SixPoints(NamedTuple):
+class SixPoints(TypedDict):
     """
     It represents the positions of six points in the plane.
     :param A, B, C, D: as in FourPoints
@@ -102,7 +103,7 @@ class SixPoints(NamedTuple):
     Q: Vector
 
 
-class BikeState(NamedTuple):
+class BikeState(TypedDict):
     """
     It represents the state of the bicycle.
     :param v: The velocity of the back-wheel contact point.
@@ -128,7 +129,13 @@ class BikeState(NamedTuple):
     position: Vector
 
 
-class ImageSet(NamedTuple):
+class WorldState(TypedDict):
+    """ It represents the state of the world. """
+    bike: BikeState
+    obstacles: List[Obstacle]
+
+
+class ImageSet(TypedDict):
     """
     It represents the set of images seen by the cameras at one point
     in time.
@@ -139,7 +146,7 @@ class ImageSet(NamedTuple):
     right: 'np.ndarray[Any]'
 
 
-class AllCamSpecs(NamedTuple):
+class AllCamSpecs(TypedDict):
     """ The specifications of the the set of cameras. """
     front: CamSpec
     left: CamSpec
@@ -152,20 +159,20 @@ def _camera_properties(x: float, y: float, orientation: float) -> AllCamSpecs:
     It is assumed that the cameras are all attached at the same point
     on the frame of the bike.
     """
-    return AllCamSpecs(
-        front=_generic_cam(orientation, x, y),
-        left=_generic_cam(orientation + m.pi/2, x, y),
-        back=_generic_cam(orientation + m.pi, x, y),
-        right=_generic_cam(orientation + 3*m.pi/2, x, y))
+    return {
+        'front': _generic_cam(orientation, x, y),
+        'left': _generic_cam(orientation + m.pi/2, x, y),
+        'back': _generic_cam(orientation + m.pi, x, y),
+        'right': _generic_cam(orientation + 3*m.pi/2, x, y)}
 
 
 def _generic_cam(alpha: float, x: float, y: float) -> CamSpec:
     """ It creates the specification of a camera. """
-    return CamSpec(
-        position=Vector(x=x, y=y),
-        k=0.1,
-        theta=m.pi/2,
-        alpha=alpha)
+    return {
+        'position': {'x': x, 'y': y},
+        'k': 0.1,
+        'theta': m.pi/2,
+        'alpha': alpha}
 
 
 def calculate_small_images(
@@ -180,15 +187,15 @@ def calculate_small_images(
     0s for obstructions and 1s for free.
     """
     cams: AllCamSpecs = _camera_properties(x, y, orientation)
-    return ImageSet(
-        front=_image_of_all_visible_obstacles(
-            cams.front, obstacles),
-        left=_image_of_all_visible_obstacles(
-            cams.left, obstacles),
-        back=_image_of_all_visible_obstacles(
-            cams.back, obstacles),
-        right=_image_of_all_visible_obstacles(
-            cams.right, obstacles))
+    return {
+        'front': _image_of_all_visible_obstacles(
+            cams['front'], obstacles),
+        'left': _image_of_all_visible_obstacles(
+            cams['left'], obstacles),
+        'back': _image_of_all_visible_obstacles(
+            cams['back'], obstacles),
+        'right': _image_of_all_visible_obstacles(
+            cams['right'], obstacles)}
 
 
 def calculate_rgb_images(ims: ImageSet) -> ImageSet:
@@ -197,11 +204,11 @@ def calculate_rgb_images(ims: ImageSet) -> ImageSet:
     bools, into square RGB images that are 100 x 100 x 3 arrays of
     unsigned 8-bit integers.
     """
-    return ImageSet(
-        front=_thin_image_to_thick(ims.front),
-        left=_thin_image_to_thick(ims.left),
-        back=_thin_image_to_thick(ims.back),
-        right=_thin_image_to_thick(ims.right))
+    return {
+        'front': _thin_image_to_thick(ims['front']),
+        'left': _thin_image_to_thick(ims['left']),
+        'back': _thin_image_to_thick(ims['back']),
+        'right': _thin_image_to_thick(ims['right'])}
 
 
 def _image_of_all_visible_obstacles(
@@ -288,9 +295,9 @@ def _rounded_image_parameters(
     err, parameters = _obstacle_image_parameters(cam, obs)
     if err is not None:
         return err, None
-    result: RoundedImageParameters = RoundedImageParameters(
-        x=n(parameters.x),
-        y=n(parameters.y))
+    result: RoundedImageParameters = {
+        'x': n(parameters['x']),
+        'y': n(parameters['y'])}
     return None, result
 
 
@@ -309,23 +316,31 @@ def _obstacle_image_parameters(
     if err is not None:
         return err, None
     X = _flatten_points(points)
-    A: float = X.A
-    B: float = X.B
-    C: float = X.C
-    D: float = X.D
+    A: float = X['A']
+    B: float = X['B']
+    C: float = X['C']
+    D: float = X['D']
     # The alternatives for when the obstacle is in view are:
     #     ABCD -> x = B - A, y = C - B
     #     BACD -> x = 0, y = C - A
     #     BADC -> x = 0, y = 100
     #     ABDC -> x = B - A, y = D - B
     if A <= B and B <= C and C <= D:
-        return (None, ImageParameters(x=B - A, y=C - B))
+        return (None, {
+            'x': B - A,
+            'y': C - B})
     if B <= A and A <= C and C <= D:
-        return (None, ImageParameters(x=0, y=C - A))
+        return (None, {
+            'x': 0,
+            'y': C - A})
     if B <= A and A <= D and D <= C:
-        return (None, ImageParameters(x=0, y=100))
+        return (None, {
+            'x': 0,
+            'y': 100})
     if A <= B and B <= D and D <= C:
-        return (None, ImageParameters(x=B - A, y=D - B))
+        return (None, {
+            'x': B - A,
+            'y': D - B})
     return "Obstacle is out of sight.", None
 
 
@@ -334,7 +349,7 @@ def _width_of_camera_lens(cam: CamSpec) -> float:
     It calculates the width of the camera lens.  See page 6 of
     ./simulateTrig.pdf for details.
     """
-    return 2 * cam.k * m.tan(cam.theta / 2)
+    return 2 * cam['k'] * m.tan(cam['theta'] / 2)
 
 
 def _calculate_ABCD_coords(
@@ -346,31 +361,31 @@ def _calculate_ABCD_coords(
     the diagram in ./simulateTrig.pdf.
     """
     rel2cam: SixPoints = _solve_geometry(cam, obs)
-    AL: Vector = rel2cam.A
-    BL: Vector = rel2cam.B
-    CL: Vector = rel2cam.C
-    DL: Vector = rel2cam.D
-    PL: Vector = rel2cam.P
-    QL: Vector = rel2cam.Q
-    BxP = BL.x*PL.y - BL.y*PL.x
-    QxC = QL.x*CL.y - QL.y*CL.x
+    AL: Vector = rel2cam['A']
+    BL: Vector = rel2cam['B']
+    CL: Vector = rel2cam['C']
+    DL: Vector = rel2cam['D']
+    PL: Vector = rel2cam['P']
+    QL: Vector = rel2cam['Q']
+    BxP = BL['x']*PL['y'] - BL['y']*PL['x']
+    QxC = QL['x']*CL['y'] - QL['y']*CL['x']
     if BxP < 0 or QxC < 0:
         return "Obstacle is out of sight.", None
-    return (None, FourPoints(
-        A=vectorSum(AL, cam.position),
-        B=vectorSum(BL, cam.position),
-        C=vectorSum(CL, cam.position),
-        D=vectorSum(DL, cam.position)))
+    return (None, {
+        'A': vectorSum(AL, cam['position']),
+        'B': vectorSum(BL, cam['position']),
+        'C': vectorSum(CL, cam['position']),
+        'D': vectorSum(DL, cam['position'])})
 
 
 def vectorSum(a: Vector, b: Vector) -> Vector:
     """ It calculates the sum of two two-vectors. """
-    return Vector(
-        x=a.x + b.x,
-        y=a.y + b.y)
+    return {
+        'x': a['x'] + b['x'],
+        'y': a['y'] + b['y']}
 
 
-class FlatPoints(NamedTuple):
+class FlatPoints(TypedDict):
     """
     It specifies the positions of the four points defined in FourPoints,
     with respect to the line through A and D.  A is at zero and D is on
@@ -396,19 +411,19 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
         through A and D, with A at zero and D on the positive side of A.
         It assumes that the point is on the line.
         """
-        return _compare_to_AD(points.A, points.D, point)
-    Bflat: float = flatten(points.B)
-    Cflat: float = flatten(points.C)
-    Dflat: float = flatten(points.D)
+        return _compare_to_AD(points['A'], points['D'], point)
+    Bflat: float = flatten(points['B'])
+    Cflat: float = flatten(points['C'])
+    Dflat: float = flatten(points['D'])
     if Dflat < 0:
         Bflat = -Bflat
         Cflat = -Cflat
         Dflat = -Dflat
-    return FlatPoints(
-        A=0.0,
-        B=Bflat,
-        C=Cflat,
-        D=Dflat)
+    return {
+        'A': 0.0,
+        'B': Bflat,
+        'C': Cflat,
+        'D': Dflat}
 
 
 def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
@@ -428,10 +443,10 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
     positions it on the x-axis.  Then the y-coordinates of A, B, C and
     D can be ignored and the x-coordinates are used as the number line.
     """
-    if m.isclose(D.x, A.x):
+    if m.isclose(D['x'], A['x']):
         # The line is vertical.
-        return X.y - A.y
-    gradient: float = (D.y - A.y) / (D.x - A.x)
+        return X['y'] - A['y']
+    gradient: float = (D['y'] - A['y']) / (D['x'] - A['x'])
     angle: float = m.atan(gradient)
     cosangle = m.cos(angle)
     sinangle = m.sin(angle)
@@ -455,7 +470,7 @@ def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
         It rotates the vector so it lies along the x-axis, and returns its
         x-coordinate.
         """
-        return cosangle * p.x + sinangle * p.y
+        return cosangle * p['x'] + sinangle * p['y']
 
     Anew, Xnew = flatten(A), flatten(X)
     return Xnew - Anew
@@ -512,11 +527,11 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     'w2s_solve_for_*.py' where * is the vector name.  The corresponding
     solution files end in 'txt'.
     """
-    t1: float = cam.position.x
-    t2: float = cam.position.y
-    n1: float = obs.position.x
-    n2: float = obs.position.y
-    k1: float = cam.k * m.cos(cam.alpha)
-    k2: float = cam.k * m.sin(cam.alpha)
-    r: float = obs.radius
-    return solve_geometry_core.main(k1, k2, n1, n2, r, t1, t2, cam.theta)
+    t1: float = cam['position']['x']
+    t2: float = cam['position']['y']
+    n1: float = obs['position']['x']
+    n2: float = obs['position']['y']
+    k1: float = cam['k'] * m.cos(cam['alpha'])
+    k2: float = cam['k'] * m.sin(cam['alpha'])
+    r: float = obs['radius']
+    return solve_geometry_core.main(k1, k2, n1, n2, r, t1, t2, cam['theta'])

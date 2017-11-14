@@ -101,16 +101,16 @@ def test_flatten_points():
     It tests the function that works out the positions
     of the four points of interest on the lens line.
     """
-    points_in = s.FourPoints(
-        A=s.Vector(x=-0.1, y=0.1),
-        B=s.Vector(x=0.021, y=0.1),
-        C=s.Vector(x=0.11, y=0.1),
-        D=s.Vector(x=0.1, y=0.1))
+    points_in: s.FourPoints = {
+        'A': {'x': -0.1, 'y': 0.1},
+        'B': {'x': 0.021, 'y': 0.1},
+        'C': {'x': 0.11, 'y': 0.1},
+        'D': {'x': 0.1, 'y': 0.1}}
     result = s._flatten_points(points_in)
-    assert isclose(result.A, 0)
-    assert isclose(result.B, 0.121)
-    assert isclose(result.C, 0.21)
-    assert isclose(result.D, 0.2)
+    assert isclose(result['A'], 0)
+    assert isclose(result['B'], 0.121)
+    assert isclose(result['C'], 0.21)
+    assert isclose(result['D'], 0.2)
 
 
 def test_compare_to_AD():
