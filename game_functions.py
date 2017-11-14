@@ -18,7 +18,7 @@ import world2sensor as s
 
 def _squared_distance_between(a: s.Vector, b: s.Vector) -> float:
     """ It calculates the square of the distance between two points. """
-    return (a['x'] - b['x'])**2 + (a['y'] - b['y'])**2
+    return (a.x - b.x)**2 + (a.y - b.y)**2
 
 
 def _crashed_into_obstacle(position, obstacles) -> bool:
@@ -91,7 +91,7 @@ IMAGE_TIMES: Tuple[float, float, float, float] = (0, 0.5, 1, 1.5)
 def imageset2numpy(i: s.ImageSet) -> 'np.ndarray[bool]':
     """ It converts a dictionary of images into a numpy array.  """
     return np.stack(  # type: ignore
-        [i['front'], i['left'], i['back'], i['right']],
+        [i.front, i.left, i.back, i.right],
         axis=1)
 
 
@@ -151,9 +151,9 @@ def _update_position(v: g.Velocity, p: s.Vector, t: float) -> s.Vector:
     It calculates the next position given the current one, the velocity,
     and a timestep.
     """
-    return {
-        'x': p['x'] + t * v.speed * math.cos(v.angle),
-        'y': p['y'] + t * v.speed * math.sin(v.angle)}
+    return s.Vector(
+        x=p.x + t * v.speed * math.cos(v.angle),
+        y=p.y + t * v.speed * math.sin(v.angle))
 
 
 @enum.unique
@@ -218,8 +218,8 @@ def update_world(
             obstacles=u.main(init.obstacles, timestep, init.position, rand),
             thin_view=s.calculate_small_images(
                 init.obstacles,
-                init.position['x'],
-                init.position['y'],
+                init.position.x,
+                init.position.y,
                 init.velocity.angle),
             keyboard=g.KeyPress.NONE,
             timestamp=init.timestamp + timestep))
@@ -240,9 +240,9 @@ def _circle(x: float, y: float, r: float, colour: str) -> g.TkOval:
 
 def _polar2cart(v: g.Velocity) -> s.Vector:
     """ It converts a vector from polar to cartesian form. """
-    return {
-        'x': v.speed * math.cos(v.angle),
-        'y': v.speed * math.sin(v.angle)}
+    return s.Vector(
+        x=v.speed * math.cos(v.angle),
+        y=v.speed * math.sin(v.angle))
 
 
 XOFFSET: float = 330
@@ -258,10 +258,10 @@ def _arrow(v: g.Velocity, colour: str) -> g.TkArrow:
     """
     vcart = _polar2cart(v)
     return g.TkArrow(
-        start_x=XOFFSET - SCALE*(vcart['x']),
-        start_y=YOFFSET + SCALE*(vcart['y']),
-        stop_x=XOFFSET + SCALE*vcart['x'],
-        stop_y=YOFFSET - SCALE*vcart['y'],
+        start_x=XOFFSET - SCALE*(vcart.x),
+        start_y=YOFFSET + SCALE*(vcart.y),
+        stop_x=XOFFSET + SCALE*vcart.x,
+        stop_y=YOFFSET - SCALE*vcart.y,
         colour=colour,
         width=1)
 
@@ -272,9 +272,9 @@ def _plot_obstacle(o: s.Obstacle) -> g.TkOval:
     in the Tkinter window.
     """
     return _circle(
-        SCALE * o['position']['x'] + XOFFSET,
-        - SCALE * o['position']['y'] + YOFFSET,
-        SCALE * o['radius'],
+        SCALE * o.position.x + XOFFSET,
+        - SCALE * o.position.y + YOFFSET,
+        SCALE * o.radius,
         'black')
 
 
@@ -287,9 +287,9 @@ def _shift_and_centre(
     at the centre of the window and the obstacles move around it instead
     of the robot moving through the obstacles.
     """
-    shifted: s.Vector = {
-        'x': o['position']['x'] - bikepos['x'],
-        'y': o['position']['y'] - bikepos['y']}
+    shifted: s.Vector = s.Vector(
+        x=o.position.x - bikepos.x,
+        y=o.position.y - bikepos.y)
     # The rotation matrix is:
     #
     #     [ cos ϴ   - sin ϴ ]
@@ -302,15 +302,15 @@ def _shift_and_centre(
     theta = - bikevel.angle + math.pi/2
     sintheta = math.sin(theta)
     costheta = math.cos(theta)
-    x = shifted['x']
-    y = shifted['y']
-    rotated: s.Vector = {
-        'x': x * costheta - y * sintheta,
-        'y': x * sintheta + y * costheta}
-    return {
-        'position': rotated,
-        'velocity': o['velocity'],
-        'radius': o['radius']}
+    x = shifted.x
+    y = shifted.y
+    rotated: s.Vector = s.Vector(
+        x=x * costheta - y * sintheta,
+        y=x * sintheta + y * costheta)
+    return s.Obstacle(
+        position=rotated,
+        velocity=o.velocity,
+        radius=o.radius)
 
 
 def _numpy_x1_to_TKimage(image: 'np.ndarray[np.uint8]'):
@@ -328,11 +328,11 @@ def _numpy_x4_to_TKimage(i: s.ImageSet):
     m x n x 3 numpy arrays to the right format for displaying in
     Tkinter.
     """
-    return {
-        'front': _numpy_x1_to_TKimage(i['front']),
-        'left': _numpy_x1_to_TKimage(i['left']),
-        'back': _numpy_x1_to_TKimage(i['back']),
-        'right': _numpy_x1_to_TKimage(i['right'])}
+    return s.ImageSet(
+        front=_numpy_x1_to_TKimage(i.front),
+        left=_numpy_x1_to_TKimage(i.left),
+        back=_numpy_x1_to_TKimage(i.back),
+        right=_numpy_x1_to_TKimage(i.right))
 
 
 def _make_tk_images(small_images: s.ImageSet) -> List[g.TkImage]:
@@ -342,10 +342,10 @@ def _make_tk_images(small_images: s.ImageSet) -> List[g.TkImage]:
     """
     images = _numpy_x4_to_TKimage(s.calculate_rgb_images(small_images))
     return [
-        g.TkImage(image=images['front'], x=320, y=110),
-        g.TkImage(image=images['back'], x=320, y=330),
-        g.TkImage(image=images['left'], x=110, y=220),
-        g.TkImage(image=images['right'], x=530, y=220)]
+        g.TkImage(image=images.front, x=320, y=110),
+        g.TkImage(image=images.back, x=320, y=330),
+        g.TkImage(image=images.left, x=110, y=220),
+        g.TkImage(image=images.right, x=530, y=220)]
 
 
 def world2view(w: g.WorldState) -> List[g.TkPicture]:

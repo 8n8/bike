@@ -9,9 +9,8 @@ bikeproject/simulateWorld/bikestep/main.tex.
 
 
 import math as m
-from typing import List
+from typing import List, NamedTuple
 import world2sensor as s
-from mypy_extensions import TypedDict
 from scipy.integrate import odeint  # type: ignore
 
 
@@ -48,14 +47,14 @@ def _p2dot(b: s.BikeState) -> float:
     d phi / dt.
     """
     return (
-        -(-b['delta'] * h2 * m4 + (h3 * m2 - h1 * m4) * b['phi'] + m2
-          * (b['delta'] * h4 - b['Tdelta'])
-          + ((c3 * m2 - c1 * m4) * b['phidot'] - c2 * b['deltadot'] * m4
-             + c4 * b['deltadot'] * m2)
-          * b['v']
-          + ((k3 * m2 - k1 * m4) * b['phi'] - b['delta'] * k2 * m4
-             + b['delta'] * k4 * m2)
-          * b['v']**2)
+        -(-b.delta * h2 * m4 + (h3 * m2 - h1 * m4) * b.phi + m2
+          * (b.delta * h4 - b.Tdelta)
+          + ((c3 * m2 - c1 * m4) * b.phidot - c2 * b.deltadot * m4
+             + c4 * b.deltadot * m2)
+          * b.v
+          + ((k3 * m2 - k1 * m4) * b.phi - b.delta * k2 * m4
+             + b.delta * k4 * m2)
+          * b.v**2)
         / m2xm3_m1xm4)
 
 
@@ -65,18 +64,18 @@ def _d2dot(b: s.BikeState) -> float:
     for this module.  d_2 is the same as d delta / dt.
     """
     return (
-        (-b['delta'] * h2 * m3 + (h3 * m1 - h1 * m3) * b['phi'] + m1
-         * (b['delta'] * h4 - b['Tdelta']) +
-         ((c3 * m1 - c1 * m3) * b['phidot'] - c2 * b['deltadot'] * m3
-          + c4 * b['deltadot'] * m1)
-         * b['v'] +
-         ((k3 * m1 - k1 * m3) * b['phi'] - b['delta'] * k2 * m3
-          + b['delta'] * k4 * m1)
-         * b['v']**2)
+        (-b.delta * h2 * m3 + (h3 * m1 - h1 * m3) * b.phi + m1
+         * (b.delta * h4 - b.Tdelta) +
+         ((c3 * m1 - c1 * m3) * b.phidot - c2 * b.deltadot * m3
+          + c4 * b.deltadot * m1)
+         * b.v +
+         ((k3 * m1 - k1 * m3) * b.phi - b.delta * k2 * m3
+          + b.delta * k4 * m1)
+         * b.v**2)
         / m2xm3_m1xm4)
 
 
-class Derivatives(TypedDict):
+class Derivatives(NamedTuple):
     """
     It represents the set of first-order derivatives that are later
     on fed into the ode solver.
@@ -97,33 +96,33 @@ def _derivatives2list(d: Derivatives) -> List[float]:
     ode solver, which is used later on.
     """
     return [
-        d['phidot'],
-        d['deltadot'],
-        d['p2dot'],
-        d['d2dot'],
-        d['psidot'],
-        d['xdot'],
-        d['ydot']]
+        d.phidot,
+        d.deltadot,
+        d.p2dot,
+        d.d2dot,
+        d.psidot,
+        d.xdot,
+        d.ydot]
 
 
-def _list2bikestate(L: List['float'], v, Tdelta, Tm) -> s.BikeState:
+def _list2bikestate(L: List[float], v, Tdelta, Tm) -> s.BikeState:
     """
     A converter from a list representing most of the bike state to
     the bikestate dictionary.  This is necessary because the scipy
     module's ode solver used later only works with lists.
     """
-    return {
-        'phi': L[0],
-        'delta': L[1],
-        'phidot': L[2],
-        'deltadot': L[3],
-        'psi': L[4],
-        'position': {
-            'x': L[5],
-            'y': L[6]},
-        'v': v,
-        'Tdelta': Tdelta,
-        'Tm': Tm}
+    return s.BikeState(
+        phi=L[0],
+        delta=L[1],
+        phidot=L[2],
+        deltadot=L[3],
+        psi=L[4],
+        position=s.Vector(
+            x=L[5],
+            y=L[6]),
+        v=v,
+        Tdelta=Tdelta,
+        Tm=Tm)
 
 
 def _calculate_velocity(Tm: float, t: float, v0: float) -> float:
@@ -169,16 +168,16 @@ def _derivatives(b: s.BikeState) -> Derivatives:
     c: float = 0.08
     # The distance between the wheel contact points.
     w: float = 1.02
-    return {
-        'phidot': b['phidot'],
-        'deltadot': b['deltadot'],
-        'p2dot': _p2dot(b),
-        'd2dot': _d2dot(b),
-        'psidot': (
-            ((b['v'] * b['delta'] + c * b['deltadot']) / w)
+    return Derivatives(
+        phidot=b.phidot,
+        deltadot=b.deltadot,
+        p2dot=_p2dot(b),
+        d2dot=_d2dot(b),
+        psidot=(
+            ((b.v * b.delta + c * b.deltadot) / w)
             * cos_lambda),
-        'xdot': b['v'] * m.cos(b['psi']),
-        'ydot': b['v'] * m.sin(b['psi'])}
+        xdot=b.v * m.cos(b.psi),
+        ydot=b.v * m.sin(b.psi))
 
 
 def _derivList(
@@ -204,13 +203,13 @@ def _make_initial_conditions(b: s.BikeState) -> List[float]:
     format is required for the scipy ode solver module.
     """
     return [
-        b['phi'],
-        b['delta'],
-        b['phidot'],
-        b['deltadot'],
-        b['psi'],
-        b['position']['x'],
-        b['position']['y']]
+        b.phi,
+        b.delta,
+        b.phidot,
+        b.deltadot,
+        b.psi,
+        b.position.x,
+        b.position.y]
 
 
 def main(b: s.BikeState, t: float) -> s.BikeState:
@@ -219,21 +218,21 @@ def main(b: s.BikeState, t: float) -> s.BikeState:
     current state of the bicycle and a time period, it calculates
     the state of the bicycle at the end of the time period.
     """
-    v: float = _calculate_velocity(b['Tm'], t, b['v'])
+    v: float = _calculate_velocity(b.Tm, t, b.v)
     sol = odeint(  # type: ignore
         _derivList,
         _make_initial_conditions(b),
         [0, t],
-        args=(v, b['Tdelta'], b['Tm']))[1]
-    return {
-        'phi': sol[0],
-        'delta': sol[1],
-        'phidot': sol[2],
-        'deltadot': sol[3],
-        'psi': sol[4],
-        'position': {
-            'x': sol[5],
-            'y': sol[6]},
-        'v': v,
-        'Tdelta': b['Tdelta'],
-        'Tm': b['Tm']}
+        args=(v, b.Tdelta, b.Tm))[1]
+    return s.BikeState(
+        phi=sol[0],
+        delta=sol[1],
+        phidot=sol[2],
+        deltadot=sol[3],
+        psi=sol[4],
+        position=s.Vector(
+            x=sol[5],
+            y=sol[6]),
+        v=v,
+        Tdelta=b.Tdelta,
+        Tm=b.Tm)

@@ -9,12 +9,11 @@ transparent.
 
 import math as m
 import random
-from typing import List
-from mypy_extensions import TypedDict
+from typing import List, NamedTuple
 import world2sensor as w
 
 
-class ObstacleParams(TypedDict):
+class ObstacleParams(NamedTuple):
     """
     It represents the random data needed to create a new obstacle.
     """
@@ -24,7 +23,7 @@ class ObstacleParams(TypedDict):
     direction: float
 
 
-class RandomData(TypedDict):
+class RandomData(NamedTuple):
     """
     It represents the random data needed to update the obstacle
     population.
@@ -34,11 +33,11 @@ class RandomData(TypedDict):
 
 
 def _generate_obstacle_params() -> ObstacleParams:
-    return {
-        'distance': random.randint(30, 50),
-        'angle': random.uniform(0, 2*m.pi),
-        'speed': random.randint(0, 13),
-        'direction': random.uniform(0, 2*m.pi)}
+    return ObstacleParams(
+        distance=random.randint(30, 50),
+        angle=random.uniform(0, 2*m.pi),
+        speed=random.randint(0, 13),
+        direction=random.uniform(0, 2*m.pi))
 
 
 def generate_params() -> RandomData:
@@ -49,9 +48,9 @@ def generate_params() -> RandomData:
     max_new: int = random.randint(0, 30)
     obs: List[ObstacleParams] = [
         _generate_obstacle_params() for _ in range(max_new)]
-    return {
-        'max_new': max_new,
-        'obstacles': obs}
+    return RandomData(
+        max_new=max_new,
+        obstacles=obs)
 
 
 def main(
@@ -71,14 +70,14 @@ def main(
     new_obstacles: List[w.Obstacle] = _make_new_obstacles(
         _num_close_obstacles(bike_position, updated_obstacles),
         bike_position,
-        rand['max_new'],
-        rand['obstacles'])
+        rand.max_new,
+        rand.obstacles)
     return updated_obstacles + new_obstacles
 
 
 def _num_close_obstacles(pos: w.Vector, obs: List[w.Obstacle]) -> int:
     return len([o for o in obs
-                if _distance_between(o['position'], pos) < 40])
+                if _distance_between(o.position, pos) < 40])
 
 
 def _num_new_obstacles(
@@ -96,33 +95,33 @@ def _random_obstacle_position(
         distance: float,
         angle: float) -> w.Vector:
     """ It randomly decides on a position for a new obstacle. """
-    return {
-        'x': bike_position['x'] + distance * m.cos(angle),
-        'y': bike_position['y'] + distance * m.sin(angle)}
+    return w.Vector(
+        x=bike_position.x + distance * m.cos(angle),
+        y=bike_position.y + distance * m.sin(angle))
 
 
 def _random_obstacle_velocity(
         randuni_0_5: float,
         randuni_0_2pi: float) -> w.Vector:
     """ It randomly decides on a velocity for a new obstacle. """
-    return {
-        'x': randuni_0_5 * m.cos(randuni_0_2pi),
-        'y': randuni_0_5 * m.sin(randuni_0_2pi)}
+    return w.Vector(
+        x=randuni_0_5 * m.cos(randuni_0_2pi),
+        y=randuni_0_5 * m.sin(randuni_0_2pi))
 
 
 def _new_random_obstacle(
         bike_position: w.Vector,
         p: ObstacleParams) -> w.Obstacle:
     """ It randomly creates a new obstacle. """
-    return {
-        'position': _random_obstacle_position(
+    return w.Obstacle(
+        position=_random_obstacle_position(
             bike_position,
-            p['distance'],
-            p['angle']),
-        'velocity': _random_obstacle_velocity(
-            p['speed'],
-            p['direction']),
-        'radius': 0.5}
+            p.distance,
+            p.angle),
+        velocity=_random_obstacle_velocity(
+            p.speed,
+            p.direction),
+        radius=0.5)
 
 
 def _make_new_obstacles(
@@ -157,24 +156,24 @@ def _move_obstacle(
         obstacle_state: w.Obstacle,
         t: float) -> w.Obstacle:
     """ It calculates the new positions of the existing obstacles. """
-    newpos: w.Vector = {
-        'x': (obstacle_state['position']['x'] +
-              obstacle_state['velocity']['x'] * t),
-        'y': (obstacle_state['position']['y'] +
-              obstacle_state['velocity']['y'] * t)}
-    return {
-        'position': newpos,
-        'velocity': obstacle_state['velocity'],
-        'radius': obstacle_state['radius']}
+    newpos: w.Vector = w.Vector(
+        x=(obstacle_state.position.x +
+           obstacle_state.velocity.x * t),
+        y=(obstacle_state.position.y +
+           obstacle_state.velocity.y * t))
+    return w.Obstacle(
+        position=newpos,
+        velocity=obstacle_state.velocity,
+        radius=obstacle_state.radius)
 
 
 def _distance_between(a: w.Vector, b: w.Vector) -> float:
     """ It calculates the distance between two points. """
-    return ((b['x'] - a['x'])**2 + (b['y'] - a['y'])**2)**0.5
+    return ((b.x - a.x)**2 + (b.y - a.y)**2)**0.5
 
 
 def _obstacle_near_to_bike(
         bike_position: w.Vector,
         obstacle: w.Obstacle) -> bool:
     """ It decides if the obstacle is near to the bicycle or not. """
-    return _distance_between(bike_position, obstacle['position']) < 60
+    return _distance_between(bike_position, obstacle.position) < 60
