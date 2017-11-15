@@ -80,4 +80,5 @@ def main():
             epochs=1)
         with open(used_file_list, 'w') as ff:
             json.dump(used_data_files, ff)
+        print('score: {}'.format(evaluate_net.main(model)))
         model.save(saved_net_file)

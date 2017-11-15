@@ -7,6 +7,8 @@ import math as m
 from typing import Any, List, Tuple  # noqa: F401
 from mypy_extensions import TypedDict
 import numpy as np
+import rounded_image_parameters
+import compare_to_AD
 
 
 class ImageParameters(TypedDict):
@@ -219,7 +221,17 @@ def _image_of_all_visible_obstacles(
     in variable 'cam_spec'.
     """
     parameter_list_with_errs: List[Tuple[str, RoundedImageParameters]] = [
-        _rounded_image_parameters(cam_spec, obstacle)
+        rounded_image_parameters.main(
+            cam_spec['position']['x'],
+            cam_spec['position']['y'],
+            cam_spec['k'],
+            cam_spec['theta'],
+            cam_spec['alpha'],
+            obstacle['position']['x'],
+            obstacle['position']['y'],
+            obstacle['velocity']['x'],
+            obstacle['velocity']['y'],
+            obstacle['radius'])
         for obstacle in obstacle_list]
     image_parameter_list_no_errs: List[RoundedImageParameters] = [
         i[1] for i in parameter_list_with_errs if i[0] is None]
@@ -410,7 +422,13 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
         through A and D, with A at zero and D on the positive side of A.
         It assumes that the point is on the line.
         """
-        return _compare_to_AD(points['A'], points['D'], point)
+        return compare_to_AD.main(
+            points['A']['x'],
+            points['A']['y'],
+            points['D']['x'],
+            points['D']['y'],
+            point['x'],
+            point['y'])
     Bflat: float = flatten(points['B'])
     Cflat: float = flatten(points['C'])
     Dflat: float = flatten(points['D'])
@@ -423,56 +441,6 @@ def _flatten_points(points: FourPoints) -> FlatPoints:
         'B': Bflat,
         'C': Cflat,
         'D': Dflat}
-
-
-def _compare_to_AD(A: Vector, D: Vector, X: Vector) -> float:
-    """
-    Each of the inputs contains two coordinates describing a point in
-    a 2D Cartesian coordinate system.  All three points are on the same
-    line.
-
-    The function calculates where point X is on the real number line
-    defined by points A and D where A is at zero and D is on the
-    positive side of A.
-
-    Let the straight line be y = mx + c where m is the gradient and
-    c is the y-intercept.  The method used here is to first translate
-    the line downwards by c, then rotate clockwise about the origin by
-    arctan(m).  This leaves the length of the line unchanged, but
-    positions it on the x-axis.  Then the y-coordinates of A, B, C and
-    D can be ignored and the x-coordinates are used as the number line.
-    """
-    if m.isclose(D['x'], A['x']):
-        # The line is vertical.
-        return X['y'] - A['y']
-    gradient: float = (D['y'] - A['y']) / (D['x'] - A['x'])
-    angle: float = m.atan(gradient)
-    cosangle = m.cos(angle)
-    sinangle = m.sin(angle)
-    # The rotated point is found by multiplying it by the rotation
-    # matrix:
-    #
-    # [rot11 rot12] [p1] = [rot11 * p1 + rot12 * p2]
-    # [rot21 rot22] [p2]   [rot21 * p1 + rot22 * p2]
-    #
-    # The y-coordinate is thrown away, so the wanted result is
-    #
-    #     rot11 * p1 + rot12 * p2
-    #
-    # In this case:
-    #
-    #     rot11 = cos(ϴ)
-    #     rot12 = sin(ϴ)
-
-    def flatten(p: Vector) -> float:
-        """
-        It rotates the vector so it lies along the x-axis, and returns its
-        x-coordinate.
-        """
-        return cosangle * p['x'] + sinangle * p['y']
-
-    Anew, Xnew = flatten(A), flatten(X)
-    return Xnew - Anew
 
 
 def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
@@ -527,80 +495,10 @@ def _solve_geometry(cam: CamSpec, obs: Obstacle) -> SixPoints:
     solution files end in 'txt'.
     """
     t1: float = cam['position']['x']
-    t12: float = t1**2
     t2: float = cam['position']['y']
-    t22: float = t2**2
     n1: float = obs['position']['x']
-    n12: float = n1**2
     n2: float = obs['position']['y']
-    n22: float = n2**2
     k1: float = cam['k'] * m.cos(cam['alpha'])
-    k12: float = k1**2
-    k13: float = k1**3
     k2: float = cam['k'] * m.sin(cam['alpha'])
-    k22: float = k2**2
-    k23: float = k2**3
     r: float = obs['radius']
-    r2: float = r**2
-    cos_half_theta: float = m.cos(cam['theta']/2)
-    sqrt = m.sqrt(n12 - 2*n1*t1 + n22 - 2*n2*t2 - r2 + t12 + t22)
-    BCdenominator: float = (
-        k12*n12 - 2*k12*n1*t1 - k12*r2 + k12*t12
-        + 2*k1*k2*n1*n2 - 2*k1*k2*n1*t2 - 2*k1*k2*n2*t1
-        + 2*k1*k2*t1*t2 + k22*n22 - 2*k22*n2*t2
-        - k22*r2 + k22*t22)
-    return {
-        'P': {
-            'x': (r*(-n1*r - n2*sqrt + r*t1 + t2*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
-            'y': (-r*(r*(n2 - t2) - (n1 - t1)*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
-        'Q': {
-            'x': (r*(-n1*r + n2*sqrt + r*t1 - t2*sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22)),
-            'y': (-r*(r*(n2 - t2) + (n1 - t1) * sqrt)
-                  / (n12 - 2*n1*t1 + n22 - 2*n2*t2 + t12 + t22))},
-        'A': {
-            'x': k1 - k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-            'y': k2 + k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta},
-        'B': {
-            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
-                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
-                   - k12*k2*r
-                   * sqrt
-                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
-                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
-                   - k23*n1*t2 - k23*n2*t1 - k23*r
-                   * sqrt
-                   + k23*t1*t2)
-                  / BCdenominator),
-            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 + k13*r
-                   * sqrt
-                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
-                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
-                   - k1*k22*n1*t2 - k1*k22*n2*t1 + k1*k22*r
-                   * sqrt
-                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
-                   - k23*r2 + k23*t22)
-                  / BCdenominator)},
-        'C': {
-            'x': ((k13*n12 - 2*k13*n1*t1 - k13*r2 + k13*t12
-                   + k12*k2*n1*n2 - k12*k2*n1*t2 - k12*k2*n2*t1
-                   + k12*k2*r*sqrt
-                   + k12*k2*t1*t2 + k1*k22*n12 - 2*k1*k22*n1*t1
-                   - k1*k22*r2 + k1*k22*t12 + k23*n1*n2
-                   - k23*n1*t2 - k23*n2*t1 + k23*r*sqrt
-                   + k23*t1*t2)
-                  / BCdenominator),
-            'y': ((k13*n1*n2 - k13*n1*t2 - k13*n2*t1 - k13*r
-                   * sqrt
-                   + k13*t1*t2 + k12*k2*n22 - 2*k12*k2*n2*t2
-                   - k12*k2*r2 + k12*k2*t22 + k1*k22*n1*n2
-                   - k1*k22*n1*t2 - k1*k22*n2*t1 - k1*k22*r
-                   * sqrt
-                   + k1*k22*t1*t2 + k23*n22 - 2*k23*n2*t2
-                   - k23*r2 + k23*t22)
-                  / BCdenominator)},
-        'D': {
-            'x': k1 + k2*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta,
-            'y': k2 - k1*m.sqrt(-cos_half_theta**2 + 1.0)/cos_half_theta}}
+    return solve_geometry_core.main(k1, k2, n1, n2, r, t1, t2, cam['theta'])

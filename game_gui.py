@@ -36,6 +36,10 @@ class _World:
         self.time = 0
         self.imref = []  # type: ignore
         self.recent_images: List['np.ndarray[bool]'] = []
+        if os.path.isfile(MODEL_FILE):
+            self.model = load_model(MODEL_FILE)
+        else:
+            self.model = None
 
     def update(self):
         """ It updates the gui window and the world state. """
@@ -72,7 +76,7 @@ class _World:
             self.history,
             u.generate_params(),
             self.timestep,
-            MODEL)
+            self.model)
         self.recent_images.append(recent_images)
         self.time += self.timestep
         self.canvas.after(int(1000 * self.timestep), self.update)
