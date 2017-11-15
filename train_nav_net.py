@@ -4,7 +4,7 @@ from typing import List, Set, Tuple  # noqa: F401
 import os
 import json
 import conv_net as f
-import game_gui as g
+import game_functions as gf
 from keras.optimizers import Adam  # type: ignore
 from keras.models import load_model  # type: ignore
 import numpy as np
@@ -13,10 +13,10 @@ import numpy as np
 DATA_DIR: str = 'game_data'
 
 
-def read_one_numpy_file(filename: str) -> g.DataSet:
+def read_one_numpy_file(filename: str) -> gf.DataSet:
     """ It reads the training data from a file. """
     dat = np.load(filename)  # type: ignore
-    return g.DataSet(
+    return gf.DataSet(
         images=dat['arr_0'],
         target_velocity=dat['arr_1'],
         velocity_in=dat['arr_2'],
@@ -25,14 +25,14 @@ def read_one_numpy_file(filename: str) -> g.DataSet:
 
 def read_numpy_data(
         used_data_files: List[str],
-        data_file_names: List[str]) -> Tuple[str, List[str], g.DataSet]:
+        data_file_names: List[str]) -> Tuple[str, List[str], gf.DataSet]:
     """
     It reads the training data from file and updates the list of
     used files.
     """
     setunused: Set[str] = set(data_file_names)
     setused: Set[str] = set(used_data_files)
-    if setunused == setused:
+    if (setunused - setused) == set():
         return "Data used up.", used_data_files, None
     filename = list(setunused - setused)[0]
     gathered_data = read_one_numpy_file(DATA_DIR + '/' + filename)
@@ -56,7 +56,7 @@ def main():
         model = f.main()
         model.compile(
             loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.001, decay=3e-4),
+            optimizer=Adam(lr=0.001, decay=3e-3),
             metrics=['accuracy'])
     training_cycle_num: int = 0
     while True:

@@ -2,8 +2,8 @@
 
 import random
 import numpy as np
-import game_gui as g
 import game_functions as f
+import game_gui as g
 import world2sensor as w
 
 
@@ -28,4 +28,4 @@ init = f.WorldState(
     thin_view=initial_image_set)
 
 
-g.main(init, 0.03, f.manual_update_world, f.world2view)
+g.main(init, 0.03, f.auto_update_world, f.world2view)

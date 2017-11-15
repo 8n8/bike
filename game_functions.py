@@ -8,12 +8,145 @@ needed to plot the world state in the GUI window.
 
 import enum
 import math
-from typing import List, Tuple
+from typing import List, Tuple, NamedTuple, Any, Union, Callable
 import numpy as np
 from PIL import ImageTk, Image  # type: ignore
-import game_gui as g
+# import game_gui as g
 import update_obstacle_pop as u
 import world2sensor as s
+
+
+@enum.unique
+class KeyPress(enum.Enum):
+    """
+    For representing which arrow key is pressed on the keyboard.
+    """
+    UP = enum.auto()
+    DOWN = enum.auto()
+    LEFT = enum.auto()
+    RIGHT = enum.auto()
+    NONE = enum.auto()
+
+
+class TkOval(NamedTuple):
+    """
+    It contains the parameters needed for drawing an oval in the GUI
+    window.
+    """
+    top_left_x: float
+    top_left_y: float
+    bottom_right_x: float
+    bottom_right_y: float
+    fill_colour: str
+
+
+class TkArrow(NamedTuple):
+    """
+    It contains the parameters needed for drawing an arrow in the GUI
+    window.
+    """
+    start_x: float
+    start_y: float
+    stop_x: float
+    stop_y: float
+    colour: str
+    width: float
+
+
+class TkImage(NamedTuple):
+    """ It contains an image and its placement in the GUI window. """
+    image: Any
+    x: float
+    y: float
+
+
+TkPicture = Union[TkOval, TkArrow, TkImage]
+
+
+class Velocity(NamedTuple):
+    """
+    The velocity of a point in the x, y plane.
+    """
+    angle: float  # between 0 and 2π
+    speed: float
+
+
+class WorldState(NamedTuple):
+    """ The state of the simulated world. """
+    crashed: bool
+    velocity: Velocity
+    position: s.Vector
+    target_velocity: Velocity
+    obstacles: List[s.Obstacle]
+    keyboard: KeyPress
+    timestamp: float
+    thin_view: s.ImageSet
+
+
+UpdateWorld = Callable[[List[WorldState], u.RandomData, float, Any],
+                       Tuple['np.ndarray[bool]', WorldState]]
+
+
+def array2velocity(arr) -> Velocity:
+    """ It converts a normalised numpy array into a velocity. """
+    return Velocity(
+        speed=(arr[0][0]*20) - 10,
+        angle=arr[0][1]*2*math.pi)
+
+
+def velocity2array(v: Velocity) -> 'np.ndarray[np.float64]':
+    """
+    It converts velocity into a numpy array and normalises it into
+    the range [0, 1] so it can be compared with the neural net output.
+    """
+    return np.array([(v.speed+10)/20, v.angle/(2*math.pi)])
+
+
+def update_keyboard(key: KeyPress, w: WorldState) -> WorldState:
+    """ It updates the 'keyboard' element of the world state. """
+    return WorldState(
+        crashed=w.crashed,
+        velocity=w.velocity,
+        position=w.position,
+        target_velocity=w.target_velocity,
+        obstacles=w.obstacles,
+        keyboard=key,
+        timestamp=w.timestamp,
+        thin_view=w.thin_view)
+
+
+class DataSet(NamedTuple):
+    """ It represents a whole game's worth of data. """
+    images: 'np.ndarray[bool]'  # n x 100 x 4 x 4
+    target_velocity: 'np.ndarray[np.float64]'  # n x 2
+    velocity_in: 'np.ndarray[np.float64]'  # n x 2
+    velocity_out: 'np.ndarray[np.float64]'  # n x 2
+
+
+MODEL_FILE: str = 'nav_net.h5'
+
+
+def prepare_for_save(
+        recent_images_set: List['np.ndarray[bool]'],
+        history: List[WorldState]) -> DataSet:
+    """
+    It converts the data gathered over the course of the game into
+    numpy arrays.
+    """
+    good_indices = [i for i, element in enumerate(recent_images_set)
+                    if element is not None]
+    target_velocities = [
+        velocity2array(history[i].target_velocity) for i in good_indices]
+    velocity_outs = [
+        velocity2array(history[i].velocity) for i in good_indices]
+    velocity_ins = [
+        velocity2array(Velocity(speed=0, angle=0))] + velocity_outs[:-1]
+    images = [recent_images_set[i] for i in good_indices]
+    return DataSet(
+        target_velocity=np.stack(target_velocities, axis=0),  # type: ignore
+        velocity_out=np.stack(velocity_outs, axis=0),  # type: ignore
+        velocity_in=np.stack(velocity_ins, axis=0),  # type: ignore
+        images=np.stack(images, axis=0))  # type: ignore
 
 
 def _squared_distance_between(a: s.Vector, b: s.Vector) -> float:
@@ -48,22 +181,22 @@ SPEED_STEP: float = 0.7
 ANGLE_STEP: float = math.pi/46
 
 
-def _update_velocity_manual(key: g.KeyPress, v: g.Velocity) -> g.Velocity:
+def _update_velocity_manual(key: KeyPress, v: Velocity) -> Velocity:
     """ It changes the velocity in response to a key press. """
-    if key == g.KeyPress.UP:
-        return g.Velocity(
+    if key == KeyPress.UP:
+        return Velocity(
             angle=v.angle,
             speed=_speed_mod(v.speed + SPEED_STEP))
-    if key == g.KeyPress.DOWN:
-        return g.Velocity(
+    if key == KeyPress.DOWN:
+        return Velocity(
             angle=v.angle,
             speed=_speed_mod(v.speed - SPEED_STEP))
-    if key == g.KeyPress.LEFT:
-        return g.Velocity(
+    if key == KeyPress.LEFT:
+        return Velocity(
             angle=_angle_mod(v.angle + ANGLE_STEP),
             speed=v.speed)
-    if key == g.KeyPress.RIGHT:
-        return g.Velocity(
+    if key == KeyPress.RIGHT:
+        return Velocity(
             angle=_angle_mod(v.angle - ANGLE_STEP),
             speed=v.speed)
     return v
@@ -96,7 +229,7 @@ def imageset2numpy(i: s.ImageSet) -> 'np.ndarray[bool]':
 
 
 def make_recent_images(
-        ws: List[g.WorldState]) -> Tuple[str, 'np.ndarray[bool]']:
+        ws: List[WorldState]) -> Tuple[str, 'np.ndarray[bool]']:
     """
     It works out the set of recent images for feeding into the neural
     network, given the history of world states.  The output array is of
@@ -114,35 +247,24 @@ def make_recent_images(
     return None, np.stack(batch, axis=2)  # type: ignore
 
 
-def array2velocity(arr) -> g.Velocity:
-    """ It converts a normalised numpy array into a velocity. """
-    return g.Velocity(
-        speed=arr[0][0]*20 - 10,
-        angle=arr[0][1]*2*math.pi)
-
-
-def velocity2array(v: g.Velocity) -> 'np.ndarray[np.float64]':
-    """
-    It converts velocity into a numpy array and normalises it into
-    the range [0, 1] so it can be compared with the neural net output.
-    """
-    return np.array([(v.speed+10)/20, v.angle/(2*math.pi)])
-
-
 def _update_velocity_auto(
-        target_velocity: g.Velocity,
+        target_velocity: Velocity,
+        velocity_in: Velocity,
         recent_images: 'np.ndarray[bool]',
-        model) -> g.Velocity:
+        model) -> Velocity:
     """ It changes the velocity using the neural network. """
     return array2velocity(model.predict(
         {'image_in': np.expand_dims(recent_images, axis=0),  # type: ignore
-         'velocity_in': np.expand_dims(  # type: ignore
+         'target_in': np.expand_dims(  # type: ignore
              velocity2array(target_velocity),
+             axis=0),
+         'velocity_in': np.expand_dims(  # type: ignore
+             velocity2array(velocity_in),
              axis=0)},
         batch_size=1))
 
 
-def _update_position(v: g.Velocity, p: s.Vector, t: float) -> s.Vector:
+def _update_position(v: Velocity, p: s.Vector, t: float) -> s.Vector:
     """
     It calculates the next position given the current one, the velocity,
     and a timestep.
@@ -160,10 +282,10 @@ class Mode(enum.Enum):
 
 
 def auto_update_world(
-        history: List[g.WorldState],
+        history: List[WorldState],
         rand: u.RandomData,
         timestep: float,
-        model) -> Tuple['np.ndarray[bool]', g.WorldState]:
+        model) -> Tuple['np.ndarray[bool]', WorldState]:
     """
     It provides a wrapper around the update_world function with the AUTO
     flag set.
@@ -172,10 +294,10 @@ def auto_update_world(
 
 
 def manual_update_world(
-        history: List[g.WorldState],
+        history: List[WorldState],
         rand: u.RandomData,
         timestep: float,
-        model) -> Tuple['np.ndarray[bool]', g.WorldState]:
+        model) -> Tuple['np.ndarray[bool]', WorldState]:
     """
     It provides a wrapper around the update_world function with the
     MANUAL flag set.
@@ -184,11 +306,11 @@ def manual_update_world(
 
 
 def update_world(
-        history: List[g.WorldState],
+        history: List[WorldState],
         rand: u.RandomData,
         mode: Mode,
         timestep: float,
-        model) -> Tuple['np.ndarray[bool]', g.WorldState]:
+        model) -> Tuple['np.ndarray[bool]', WorldState]:
     """
     It predicts the new state of the world in a short amount of time,
     given the current state and some random data for calculating the
@@ -198,15 +320,15 @@ def update_world(
     init = history[-1]
     if mode == Mode.AUTO:
         if err is None:
-            velocity: g.Velocity = _update_velocity_auto(
-                init.target_velocity, recent_images, model)
+            velocity: Velocity = _update_velocity_auto(
+                init.target_velocity, init.velocity, recent_images, model)
         else:
             velocity = init.velocity
     if mode == Mode.MANUAL:
         velocity = _update_velocity_manual(init.keyboard, init.velocity)
     return (  # type: ignore
         recent_images,
-        g.WorldState(
+        WorldState(
             crashed=_crashed_into_obstacle(init.position, init.obstacles),
             velocity=velocity,
             position=_update_position(init.velocity, init.position, timestep),
@@ -217,16 +339,16 @@ def update_world(
                 init.position['x'],
                 init.position['y'],
                 init.velocity.angle),
-            keyboard=g.KeyPress.NONE,
+            keyboard=KeyPress.NONE,
             timestamp=init.timestamp + timestep))
 
 
-def _circle(x: float, y: float, r: float, colour: str) -> g.TkOval:
+def _circle(x: float, y: float, r: float, colour: str) -> TkOval:
     """
     It calculates the parameters needed to draw a circle in TKinter, with
     centre at (x, y) and radius r.
     """
-    return g.TkOval(
+    return TkOval(
         top_left_x=x - r,
         top_left_y=y - r,
         bottom_right_x=x + r,
@@ -234,7 +356,7 @@ def _circle(x: float, y: float, r: float, colour: str) -> g.TkOval:
         fill_colour=colour)
 
 
-def _polar2cart(v: g.Velocity) -> s.Vector:
+def _polar2cart(v: Velocity) -> s.Vector:
     """ It converts a vector from polar to cartesian form. """
     return {
         'x': v.speed * math.cos(v.angle),
@@ -246,14 +368,14 @@ YOFFSET: float = 800
 SCALE: float = 8
 
 
-def _arrow(v: g.Velocity, colour: str) -> g.TkArrow:
+def _arrow(v: Velocity, colour: str) -> TkArrow:
     """
     It calculates the parameters needed to draw an arrow in Tkinter,
     centred at the origin, with a length proportional to the magnitude
     of the velocity.
     """
     vcart = _polar2cart(v)
-    return g.TkArrow(
+    return TkArrow(
         start_x=XOFFSET - SCALE*(vcart['x']),
         start_y=YOFFSET + SCALE*(vcart['y']),
         stop_x=XOFFSET + SCALE*vcart['x'],
@@ -262,7 +384,7 @@ def _arrow(v: g.Velocity, colour: str) -> g.TkArrow:
         width=1)
 
 
-def _plot_obstacle(o: s.Obstacle) -> g.TkOval:
+def _plot_obstacle(o: s.Obstacle) -> TkOval:
     """
     It calculates the parameters needed to plot an obstacle as a circle
     in the Tkinter window.
@@ -277,7 +399,7 @@ def _plot_obstacle(o: s.Obstacle) -> g.TkOval:
 def _shift_and_centre(
         o: s.Obstacle,
         bikepos: s.Vector,
-        bikevel: g.Velocity) -> s.Obstacle:
+        bikevel: Velocity) -> s.Obstacle:
     """
     It shifts and rotates the obstacle so that the robot can be plotted
     at the centre of the window and the obstacles move around it instead
@@ -331,35 +453,35 @@ def _numpy_x4_to_TKimage(i: s.ImageSet):
         'right': _numpy_x1_to_TKimage(i['right'])}
 
 
-def _make_tk_images(small_images: s.ImageSet) -> List[g.TkImage]:
+def _make_tk_images(small_images: s.ImageSet) -> List[TkImage]:
     """
     It calculates the images from the worldstate and converts them into
     the correct format for displaying in a Tkinter window.
     """
     images = _numpy_x4_to_TKimage(s.calculate_rgb_images(small_images))
     return [
-        g.TkImage(image=images['front'], x=320, y=110),
-        g.TkImage(image=images['back'], x=320, y=330),
-        g.TkImage(image=images['left'], x=110, y=220),
-        g.TkImage(image=images['right'], x=530, y=220)]
+        TkImage(image=images['front'], x=320, y=110),
+        TkImage(image=images['back'], x=320, y=330),
+        TkImage(image=images['left'], x=110, y=220),
+        TkImage(image=images['right'], x=530, y=220)]
 
 
-def world2view(w: g.WorldState) -> List[g.TkPicture]:
+def world2view(w: WorldState) -> List[TkPicture]:
     """
     It works out how to make the view in the Tkinter window, given the
     state of the world.
     """
-    robot: g.TkPicture = _circle(XOFFSET, YOFFSET, SCALE * 1.2, 'red')
-    arrow_actual: g.TkPicture = _arrow(
-        g.Velocity(speed=w.velocity.speed, angle=math.pi/2),
+    robot: TkPicture = _circle(XOFFSET, YOFFSET, SCALE * 1.2, 'red')
+    arrow_actual: TkPicture = _arrow(
+        Velocity(speed=w.velocity.speed, angle=math.pi/2),
         'red')
-    arrow_target: g.TkPicture = _arrow(
-        g.Velocity(speed=w.target_velocity.speed,
-                   angle=(w.target_velocity.angle
-                          - w.velocity.angle + math.pi/2)),
+    arrow_target: TkPicture = _arrow(
+        Velocity(speed=w.target_velocity.speed,
+                 angle=(w.target_velocity.angle
+                        - w.velocity.angle + math.pi/2)),
         'black')
-    obstacles: List[g.TkPicture] = [
+    obstacles: List[TkPicture] = [
         _plot_obstacle(_shift_and_centre(o, w.position, w.velocity))
         for o in w.obstacles]
-    images: List[g.TkPicture] = _make_tk_images(w.thin_view)  # type: ignore
+    images: List[TkPicture] = _make_tk_images(w.thin_view)  # type: ignore
     return [robot, arrow_actual, arrow_target] + obstacles + images
