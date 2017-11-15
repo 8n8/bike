@@ -52,6 +52,6 @@ def main(model):
     """
     It calculates the mean time till the robot crashes into something.
     """
-    times = [run_one_test(model) for _ in range(10)]
+    times = [run_one_test(model) for _ in range(30)]
     # 23.6s is my average time playing the game manually.
     return round(sum(times) / (23.6 * len(times)), 2)
