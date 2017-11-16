@@ -56,7 +56,7 @@ def main():
         model = f.main()
         model.compile(
             loss='categorical_crossentropy',
-            optimizer=Adam(),
+            optimizer=Adam(lr=0.0002),
             metrics=['accuracy'])
     training_cycle_num: int = 0
     for i in range(10):
