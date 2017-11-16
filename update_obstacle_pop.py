@@ -37,7 +37,7 @@ def _generate_obstacle_params() -> ObstacleParams:
     return {
         'distance': random.randint(30, 50),
         'angle': random.uniform(0, 2*m.pi),
-        'speed': random.randint(0, 13),
+        'speed': random.randint(0, 7),
         'direction': random.uniform(0, 2*m.pi)}
 
 

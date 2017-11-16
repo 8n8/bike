@@ -4,8 +4,7 @@ till the robot crashes into something and returns the average time.
 """
 
 import random
-import game_functions
-import game_gui as g
+import game_functions as g
 import update_obstacle_pop
 import numpy as np
 import world2sensor as w
@@ -39,7 +38,7 @@ def run_one_test(model):
     """
     history = [init]
     while not history[-1].crashed:
-        _, new_state = game_functions.auto_update_world(
+        _, new_state = g.auto_update_world(
             history,
             update_obstacle_pop.generate_params(),
             0.03,

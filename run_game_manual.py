@@ -1,8 +1,10 @@
 """ It runs the navigation game. """
 
+import random
+import numpy as np
 import game_gui as g
 import game_functions as f
-import evaluate_net
+import world2sensor as w
 
 
 blank_image = np.ones((100))

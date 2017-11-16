@@ -56,29 +56,28 @@ def main():
         model = f.main()
         model.compile(
             loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.001, decay=3e-3),
+            optimizer=Adam(),
             metrics=['accuracy'])
     training_cycle_num: int = 0
-    while True:
-        print('Reading data from files...')
-        err, used_data_files, d = read_numpy_data(used_data_files,
-                                                  data_file_names)
-        if err is not None:
-            print(err)
-            model.save(saved_net_file)
-            with open(used_file_list, 'w') as ff:
-                json.dump(used_data_files, ff)
-            return
-        print("Training cycle {}".format(training_cycle_num))
-        training_cycle_num += 1
-        model.fit(
-            {'image_in': d.images,
-             'velocity_in': d.velocity_in,
-             'target_in': d.target_velocity},
-            d.velocity_out,
-            batch_size=1000,
-            epochs=1)
-        with open(used_file_list, 'w') as ff:
-            json.dump(used_data_files, ff)
-        print('score: {}'.format(evaluate_net.main(model)))
+    for i in range(10):
+        while True:
+            print('Reading data from files...')
+            err, used_data_files, d = read_numpy_data(used_data_files,
+                                                      data_file_names)
+            if err is not None:
+                print(err)
+                model.save(saved_net_file)
+                with open(used_file_list, 'w') as ff:
+                    json.dump(used_data_files, ff)
+                break
+            print("Training cycle {}".format(training_cycle_num))
+            training_cycle_num += 1
+            model.fit(
+                {'image_in': d.images,
+                 'velocity_in': d.velocity_in,
+                 'target_in': d.target_velocity},
+                d.velocity_out,
+                batch_size=5000,
+                epochs=1)
+        used_data_files = [] 
         model.save(saved_net_file)

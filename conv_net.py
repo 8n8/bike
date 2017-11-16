@@ -54,6 +54,8 @@ conv6 = k.layers.convolutional.Conv2D(
 
 flat = k.layers.core.Flatten()
 
+dense0 = k.layers.Dense(100, activation='relu')
+
 dense1 = k.layers.Dense(50, activation='relu')
 
 dense2 = k.layers.Dense(25, activation='relu')
@@ -68,8 +70,8 @@ def main():
     imin = k.layers.Input(shape=(100, 4, 4), name='image_in')
     velin = k.layers.Input(shape=(2,), name='velocity_in')
     targetin = k.layers.Input(shape=(2,), name='target_in')
-    conv = flat(bn()(conv6(bn()(conv5(bn()(conv4(bn()(conv3(
-        bn()(conv2(bn()(conv1(bn()(imin))))))))))))))
+    conv = flat(conv6(bn()(conv5(bn()(conv4(bn()(conv3(
+        bn()(conv2(bn()(conv1(bn()(imin)))))))))))))
     midin = k.layers.concatenate([conv, targetin, velin])
-    dense = dense3(bn()(dense2(bn()(dense1(bn()(midin))))))
+    dense = dense3(bn()(dense2(bn()(dense1(bn()(dense0(bn()(midin))))))))
     return k.models.Model(inputs=[imin, targetin, velin], outputs=[dense])
