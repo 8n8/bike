@@ -64,6 +64,7 @@ dense3 = k.layers.Dense(2, activation='softmax')
 
 bn = k.layers.BatchNormalization
 
+gru = k.layers.GRU(200)
 
 def main():
     """ It creates the neural network. """
