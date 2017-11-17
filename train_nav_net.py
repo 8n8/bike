@@ -59,7 +59,7 @@ def main():
             optimizer=Adam(lr=0.0002),
             metrics=['accuracy'])
     training_cycle_num: int = 0
-    for i in range(10):
+    for _ in range(10):
         while True:
             print('Reading data from files...')
             err, used_data_files, d = read_numpy_data(used_data_files,
@@ -79,5 +79,5 @@ def main():
                 d.velocity_out,
                 batch_size=5000,
                 epochs=1)
-        used_data_files = [] 
+        used_data_files = []
         model.save(saved_net_file)

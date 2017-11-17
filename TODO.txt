@@ -1,2 +1,0 @@
-+ make automatic nn evaluator
-+ evaluate my performance to compare with
