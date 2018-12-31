@@ -1,5 +1,3 @@
-# Bike
-
 This is a project I did to teach me more about neural networks in Python, as preparation for a robot navigation project.
 
 The main idea behind the project is for a neural network to learn from the choices a human driver makes when navigating a world full of unpredictable moving obstacles.  The main part of this program is a little game where the player controls a robot moving through a world with these properties:
@@ -16,7 +14,7 @@ The next part of the program is a trainer, which uses the data saved from the ga
 
 The final part of the program is an automatic player of the game, using the trained neural network.
 
-## Installation
+# Installation
 
 This installation should work in Ubuntu Linux 18.04.1 LTS.  I didn't actually start with a clean Ubuntu install, so you might find that there is something you need that is not mentioned here.  It shouldn't be too hard to work out though.
 
@@ -30,13 +28,13 @@ This installation should work in Ubuntu Linux 18.04.1 LTS.  I didn't actually st
 7. Install the dependencies with ```pip install -r requirements.txt```.
 8. If you wish, run the tests with ```pytest```.
 
-## Playing the game
+# Playing the game
 
 Run the command ```python run_game_manual.py```.
 
 The top part of the window shows the images from the four cameras mounted on the robot: left, top, right and back.  The lower part is an arial view of the simulated world, showing the robot as a large red dot and the obstacles as small black dots.
 
-There are two arrows drawn on the robot.  The red one is the actual velocity of the robot and the black is the desired velocity.  The aim of the game is to keep the two arrows the same length and pointing in the same direction.
+There are two arrows drawn on the robot.  The red one is the actual velocity of the robot and the black is the desired velocity.  The aim of the game is to keep the two arrows the same length and pointing in the same direction.  You will notice that the world is centered on the robot, so for example when you turn right, it looks like the whole world rotates to the left instead.
 
 Keyboard controls:
 
@@ -48,10 +46,10 @@ Keyboard controls:
 
 The more data the better.
 
-## Training the network
+# Training the network
 
 The data from playing the game is saved into the directory 'game_data'.  Run the trainer with the command ```python run_trainer.py```.  The trainer does 10 passes over the data.  The trained model is saved in the file 'nav_net.h5'.
 
-## Let the neural net play the game
+# Let the neural net play the game
 
 Run the command ```python run_game_auto.py```.  The game GUI window will open and the robot will drive automatically.
