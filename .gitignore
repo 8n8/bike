@@ -1,0 +1,8 @@
+venv/
+game_data/
+nav_net.h5
+__pycache__/
+.mypy_cache/
+*.sw*
+.cache/
+used_files

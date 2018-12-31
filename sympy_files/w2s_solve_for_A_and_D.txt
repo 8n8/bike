@@ -1,0 +1,12 @@
+[(
+k1 - k2*sqrt(-costheta**2 + 1.0)/costheta,
+k2 + k1*sqrt(-costheta**2 + 1.0)/costheta,
+k1 + k2*sqrt(-costheta**2 + 1.0)/costheta,
+k2 - k1*sqrt(-costheta**2 + 1.0)/costheta
+),
+(
+k1 + k2*sqrt(-costheta**2 + 1.0)/costheta,
+k2 - k1*sqrt(-costheta**2 + 1.0)/costheta,
+k1 - k2*sqrt(-costheta**2 + 1.0)/costheta,
+k2 + k1*sqrt(-costheta**2 + 1.0)/costheta
+)]
