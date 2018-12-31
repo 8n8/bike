@@ -119,8 +119,8 @@ def main(
     """
     root = k.Tk()
     root.title('Robot navigation simulator')
-    root.geometry('800x600')
-    canvas = k.Canvas(root, width=650, height=1000, bg='grey')
+    root.geometry('650x750')
+    canvas = k.Canvas(root, width=650, height=750, bg='grey')
     canvas.pack()
 
     world = _World(canvas, init, timestep, update_world, world2view)

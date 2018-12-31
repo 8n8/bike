@@ -364,8 +364,8 @@ def _polar2cart(v: Velocity) -> s.Vector:
 
 
 XOFFSET: float = 330
-YOFFSET: float = 800
-SCALE: float = 8
+YOFFSET: float = 600
+SCALE: float = 7
 
 
 def _arrow(v: Velocity, colour: str) -> TkArrow:
