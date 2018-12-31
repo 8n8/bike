@@ -119,7 +119,7 @@ def main(
     """
     root = k.Tk()
     root.title('Robot navigation simulator')
-    root.geometry('800x600')
+    root.geometry('80A privacy reminder from Google
     canvas = k.Canvas(root, width=650, height=1000, bg='grey')
     canvas.pack()
 
