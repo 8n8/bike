@@ -18,7 +18,7 @@ The final part of the program is an automatic player of the game, using the trai
 
 This installation should work in Ubuntu Linux 18.04.1 LTS.  I didn't actually start with a clean Ubuntu install, so you might find that there is something you need that is not mentioned here.  It shouldn't be too hard to work out though.
 
-1. You will need Python3.6.  It is likely already installed - check with ```python3.6 --version```.
+1. You will need Python3.6.  It is likely already installed - check with the command ```python3.6 --version```.
 2. Install tk for the GUI - the game uses Tkinter.  This is available in Ubuntu with ```sudo apt install tk```.
 3. Check that pip (the Python package manager) is installed with ```pip3 --version```.  (Don't forget the '3' after pip, because you need the version for Python 3, not Python 2.)  If not, install it with ```sudo apt install python3-pip```.
 4. Install virtualenv with ```pip3 install virtualenv```.  (Used for isolating project dependencies, so you don't have to mess with the global Python packages to get something to run.)
