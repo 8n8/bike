@@ -20,7 +20,7 @@ This installation should work in Ubuntu Linux 18.04.1 LTS.  I didn't actually st
 2. Install tk for the GUI - the game uses Tkinter.  This is available in Ubuntu with ```sudo apt install tk```.
 3. Check that pip (the Python package manager) is installed with ```pip3 --version```.  (Don't forget the '3' after pip, because you need the version for Python 3, not Python 2.)  If not, install it with ```sudo apt install python3-pip```.
 4. Install virtualenv with ```pip3 install virtualenv```.  (Used for isolating project dependencies, so you don't have to mess with the global Python packages to get something to run.)
-1. Clone this repository with ```git clone git@bitbucket.org:5-o/bike.git``` and ```cd``` into it.
+1. Clone this repository with ```git clone https://github.com/8n8/bike.git``` and ```cd``` into it.
 5. Set up a new virtual environment for the project with ```python3.6 -m virtualenv venv```.
 6. Enter the virtual environment with ```source venv/bin/activate```.
 7. Install the dependencies with ```pip install -r requirements.txt```.
