@@ -484,4 +484,4 @@ def world2view(w: WorldState) -> List[TkPicture]:
         _plot_obstacle(_shift_and_centre(o, w.position, w.velocity))
         for o in w.obstacles]
     images: List[TkPicture] = _make_tk_images(w.thin_view)  # type: ignore
-    return [robot, arrow_actual, arrow_target] + obstacles + images
+    return [robot, arrow_actual, arrow_target] + images # + obstacles
