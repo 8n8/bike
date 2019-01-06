@@ -222,11 +222,10 @@ def _thin_image_to_thick(
     RGB image.  Ones are white, zeros are black.  The original array
     is stretched vertically.
     """
-    # The transpose operation is necessary because when later this
-    # Numpy array is viewed as an image it comes out rotated by 90
-    # degrees without it.
     with_height = np.stack(  # type: ignore
         (thin_im for _ in range(100)), axis=0)
+    # if len(with_height.shape) == 1:
+    #     with_height = np.expand_dims(with_height, axis=0)
     with_rgb = np.stack(  # type: ignore
         (with_height for _ in range(3)), axis=2)
     as_uint8 = with_rgb.astype(np.uint8)

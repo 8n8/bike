@@ -42,6 +42,7 @@ class _World:
         if self.state.crashed:
             print('Robot has crashed into obstacle.')
             return
+        print(self.state.velocity)
         self.canvas.delete('all')
         for i in self.world2view(self.state):
             if isinstance(i, g.TkOval):

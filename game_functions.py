@@ -143,7 +143,6 @@ def prepare_for_save(
         velocity2array(Velocity(speed=0, angle=0))] + velocity_outs[:-1]
     images = [np.expand_dims(recent_images_set[i], axis=1)
               for i in good_indices]
-    print(images[0].shape)
     return DataSet(
         target_velocity=np.stack(target_velocities, axis=0),  # type: ignore
         velocity_out=np.stack(velocity_outs, axis=0),  # type: ignore
@@ -257,7 +256,7 @@ def _update_velocity_auto(
         model) -> Velocity:
     """ It changes the velocity using the neural network. """
     return array2velocity(model.predict(
-        {'image_in': np.expand_dims(recent_images, axis=0),  # type: ignore
+        {'image_in': np.expand_dims(np.expand_dims(recent_images, axis=0), axis=2),  # type: ignore
          'target_in': np.expand_dims(  # type: ignore
              velocity2array(target_velocity),
              axis=0),
