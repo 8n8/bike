@@ -36,6 +36,7 @@ def read_numpy_data(
         return "Data used up.", used_data_files, None
     filename = list(setunused - setused)[0]
     gathered_data = read_one_numpy_file(DATA_DIR + '/' + filename)
+    print(gathered_data.images.shape)
     used_data_files.append(filename)
     return None, used_data_files, gathered_data
 

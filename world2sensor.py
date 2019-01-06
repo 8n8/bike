@@ -178,23 +178,16 @@ def calculate_small_images(
         obstacles: List[Obstacle],
         x: float,
         y: float,
-        orientation: float) -> ImageSet:
+        orientation: float):
     """
     It calculates the images of the surroundings for each of the four
     cameras.  Since the world has no vertical variation and is black-and-
     white, these images are expressed as 1 x 100 arrays of bools, with
     0s for obstructions and 1s for free.
     """
-    cams: AllCamSpecs = _camera_properties(x, y, orientation)
-    return {
-        'front': _image_of_all_visible_obstacles(
-            cams['front'], obstacles),
-        'left': _image_of_all_visible_obstacles(
-            cams['left'], obstacles),
-        'back': _image_of_all_visible_obstacles(
-            cams['back'], obstacles),
-        'right': _image_of_all_visible_obstacles(
-            cams['right'], obstacles)}
+    return _image_of_all_visible_obstacles(
+               _generic_cam(orientation, x, y),
+               obstacles)
 
 
 def calculate_rgb_images(ims: ImageSet) -> ImageSet:
@@ -203,11 +196,7 @@ def calculate_rgb_images(ims: ImageSet) -> ImageSet:
     bools, into square RGB images that are 100 x 100 x 3 arrays of
     unsigned 8-bit integers.
     """
-    return {
-        'front': _thin_image_to_thick(ims['front']),
-        'left': _thin_image_to_thick(ims['left']),
-        'back': _thin_image_to_thick(ims['back']),
-        'right': _thin_image_to_thick(ims['right'])}
+    return _thin_image_to_thick(ims)
 
 
 def _image_of_all_visible_obstacles(
@@ -237,7 +226,7 @@ def _thin_image_to_thick(
     # Numpy array is viewed as an image it comes out rotated by 90
     # degrees without it.
     with_height = np.stack(  # type: ignore
-        (thin_im for _ in range(100)), axis=1).T
+        (thin_im for _ in range(100)), axis=0)
     with_rgb = np.stack(  # type: ignore
         (with_height for _ in range(3)), axis=2)
     as_uint8 = with_rgb.astype(np.uint8)
