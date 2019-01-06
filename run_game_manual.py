@@ -20,7 +20,7 @@ init = f.WorldState(
     velocity=f.Velocity(speed=0, angle=0),
     position={'x': 0, 'y': 0},
     target_velocity=f.Velocity(
-        speed=random.uniform(5, 10),
+        speed=random.uniform(3, 7),
         angle=0),
     obstacles=[],
     keyboard=f.KeyPress.NONE,

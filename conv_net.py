@@ -59,7 +59,7 @@ bn = k.layers.BatchNormalization
 
 def main():
     """ It creates the neural network. """
-    imin = k.layers.Input(shape=(100, 4, 4), name='image_in')
+    imin = k.layers.Input(shape=(100, 4, 1), name='image_in')
     velin = k.layers.Input(shape=(2,), name='velocity_in')
     targetin = k.layers.Input(shape=(2,), name='target_in')
     conv = flat(conv5(bn()(conv4(bn()(conv3(
