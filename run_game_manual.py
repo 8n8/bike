@@ -25,7 +25,7 @@ init = f.WorldState(
     obstacles=[],
     keyboard=f.KeyPress.NONE,
     timestamp=0,
-    thin_view=blank_image)
+    thin_view=initial_image_set)
 
 
 g.main(init, 0.03, f.manual_update_world, f.world2view)

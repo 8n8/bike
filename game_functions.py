@@ -80,7 +80,7 @@ class WorldState(NamedTuple):
     obstacles: List[s.Obstacle]
     keyboard: KeyPress
     timestamp: float
-    thin_view: 'np.ndarray[bool]'
+    thin_view: s.ImageSet
 
 
 UpdateWorld = Callable[[List[WorldState], u.RandomData, float, Any],
@@ -141,9 +141,7 @@ def prepare_for_save(
         velocity2array(history[i].velocity) for i in good_indices]
     velocity_ins = [
         velocity2array(Velocity(speed=0, angle=0))] + velocity_outs[:-1]
-    images = [np.expand_dims(recent_images_set[i], axis=1)
-              for i in good_indices]
-    print(images[0].shape)
+    images = [recent_images_set[i] for i in good_indices]
     return DataSet(
         target_velocity=np.stack(target_velocities, axis=0),  # type: ignore
         velocity_out=np.stack(velocity_outs, axis=0),  # type: ignore
@@ -237,17 +235,16 @@ def make_recent_images(
     network, given the history of world states.  The output array is of
     shape 100 x 4 x 4.
     """
-    return None, ws[-1].thin_view
-    # now: float = ws[-1].timestamp
-    # timestamps = np.array([w.timestamp for w in ws])
-    # i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now)
-    #                   for t in IMAGE_TIMES]
-    # nones: List[bool] = [i is None for i in i_s]
-    # if any(nones):
-    #     return "Not possible to make this batch.", None
-    # batch: List['np.ndarray[bool]'] = [
-    #     imageset2numpy(ws[i].thin_view) for i in i_s]
-    # return None, np.stack(batch, axis=2)  # type: ignore
+    now: float = ws[-1].timestamp
+    timestamps = np.array([w.timestamp for w in ws])
+    i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now)
+                      for t in IMAGE_TIMES]
+    nones: List[bool] = [i is None for i in i_s]
+    if any(nones):
+        return "Not possible to make this batch.", None
+    batch: List['np.ndarray[bool]'] = [
+        imageset2numpy(ws[i].thin_view) for i in i_s]
+    return None, np.stack(batch, axis=2)  # type: ignore
 
 
 def _update_velocity_auto(
@@ -443,14 +440,30 @@ def _numpy_x1_to_TKimage(image: 'np.ndarray[np.uint8]'):
         Image.fromarray(image).resize((200, 200), Image.ANTIALIAS))
 
 
-def _make_tk_images(small_image):
+def _numpy_x4_to_TKimage(i: s.ImageSet):
+    """
+    It converts a set of four camera images from the four cameras from
+    m x n x 3 numpy arrays to the right format for displaying in
+    Tkinter.
+    """
+    return {
+        'front': _numpy_x1_to_TKimage(i['front']),
+        'left': _numpy_x1_to_TKimage(i['left']),
+        'back': _numpy_x1_to_TKimage(i['back']),
+        'right': _numpy_x1_to_TKimage(i['right'])}
+
+
+def _make_tk_images(small_images: s.ImageSet) -> List[TkImage]:
     """
     It calculates the images from the worldstate and converts them into
     the correct format for displaying in a Tkinter window.
     """
-    return TkImage(image=_numpy_x1_to_TKimage(s.calculate_rgb_images(small_image)),
-                   x=320,
-                   y=110)
+    images = _numpy_x4_to_TKimage(s.calculate_rgb_images(small_images))
+    return [
+        TkImage(image=images['front'], x=320, y=110),
+        TkImage(image=images['back'], x=320, y=330),
+        TkImage(image=images['left'], x=110, y=220),
+        TkImage(image=images['right'], x=530, y=220)]
 
 
 def world2view(w: WorldState) -> List[TkPicture]:
@@ -470,5 +483,5 @@ def world2view(w: WorldState) -> List[TkPicture]:
     obstacles: List[TkPicture] = [
         _plot_obstacle(_shift_and_centre(o, w.position, w.velocity))
         for o in w.obstacles]
-    image: TkPicture = _make_tk_images(w.thin_view)  # type: ignore
-    return [robot, arrow_actual, arrow_target, image] # + obstacles
+    images: List[TkPicture] = _make_tk_images(w.thin_view)  # type: ignore
+    return [robot, arrow_actual, arrow_target] + images # + obstacles
