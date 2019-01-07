@@ -5,7 +5,7 @@ import keras as k  # type: ignore
 
 
 conv1 = k.layers.convolutional.Conv1D(
-    3,
+    6,
     5,
     strides=1,
     padding='same',
@@ -13,7 +13,7 @@ conv1 = k.layers.convolutional.Conv1D(
 
 
 conv2 = k.layers.convolutional.Conv1D(
-    5,
+    10,
     5,
     strides=1,
     padding='same',
@@ -21,7 +21,7 @@ conv2 = k.layers.convolutional.Conv1D(
 
 
 conv3 = k.layers.convolutional.Conv1D(
-    5,
+    10,
     5,
     strides=1,
     padding='same',
@@ -29,7 +29,7 @@ conv3 = k.layers.convolutional.Conv1D(
 
 
 conv4 = k.layers.convolutional.Conv1D(
-    5,
+    10,
     3,
     strides=1,
     padding='same',
@@ -37,7 +37,7 @@ conv4 = k.layers.convolutional.Conv1D(
 
 
 conv5 = k.layers.convolutional.Conv1D(
-    5,
+    10,
     3,
     strides=1,
     padding='same',

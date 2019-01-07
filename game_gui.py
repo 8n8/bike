@@ -8,6 +8,7 @@ from keras.models import load_model  # type: ignore
 import numpy as np
 import update_obstacle_pop as u
 import game_functions as g
+import random
 
 
 if os.path.isfile(g.MODEL_FILE):
@@ -42,7 +43,6 @@ class _World:
         if self.state.crashed:
             print('Robot has crashed into obstacle.')
             return
-        print(self.state.velocity)
         self.canvas.delete('all')
         for i in self.world2view(self.state):
             if isinstance(i, g.TkOval):
@@ -95,6 +95,16 @@ class _World:
 
     def save(self, _):
         """ It saves the data gathered so far to file. """
+        newv = g.Velocity(speed=random.uniform(3, 7), angle=0)
+        self.state = g.WorldState(
+            crashed=self.state.crashed,
+            velocity=newv,
+            position=self.state.position,
+            target_velocity=newv,
+            obstacles=self.state.obstacles,
+            keyboard=self.state.keyboard,
+            timestamp=self.state.timestamp,
+            thin_view=self.state.thin_view)
         filename: str = 'game_data/' + str(uuid.uuid4())
         dat: g.DataSet = g.prepare_for_save(self.recent_images, self.history)
         np.savez(filename, dat.images, dat.target_velocity,

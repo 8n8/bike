@@ -89,9 +89,14 @@ UpdateWorld = Callable[[List[WorldState], u.RandomData, float, Any],
 
 def array2velocity(arr) -> Velocity:
     """ It converts a normalised numpy array into a velocity. """
-    return Velocity(
-        speed=(arr[0][0]*20) - 10,
-        angle=arr[0][1]*2*math.pi)
+    x, y = arr[0][0], arr[0][1]
+    x1 = x*20 - 10
+    y1 = y*20 - 10
+    speed = (x1**2 + y1**2)**0.5
+    angle = math.atan2(y1, x1)
+    if angle < 0:
+        angle += math.pi
+    return Velocity(speed=speed, angle=angle)
 
 
 def velocity2array(v: Velocity) -> 'np.ndarray[np.float64]':
@@ -99,7 +104,9 @@ def velocity2array(v: Velocity) -> 'np.ndarray[np.float64]':
     It converts velocity into a numpy array and normalises it into
     the range [0, 1] so it can be compared with the neural net output.
     """
-    return np.array([(v.speed+10)/20, v.angle/(2*math.pi)])
+    x = (v.speed * math.cos(v.angle) + 10)/20
+    y = (v.speed * math.sin(v.angle) + 10)/20
+    return np.array([x, y])
 
 
 def update_keyboard(key: KeyPress, w: WorldState) -> WorldState:
@@ -134,9 +141,11 @@ def prepare_for_save(
     numpy arrays.
     """
     good_indices = [i for i, element in enumerate(recent_images_set)
-                    if element is not None]
+                    if element is not None
+                    and i % 5 == 0]
     target_velocities = [
-        velocity2array(history[i].target_velocity) for i in good_indices]
+        velocity2array(history[i].target_velocity)
+        for i in good_indices]
     velocity_outs = [
         velocity2array(history[i].velocity) for i in good_indices]
     velocity_ins = [
@@ -255,8 +264,10 @@ def _update_velocity_auto(
         recent_images: 'np.ndarray[bool]',
         model) -> Velocity:
     """ It changes the velocity using the neural network. """
-    return array2velocity(model.predict(
-        {'image_in': np.expand_dims(np.expand_dims(recent_images, axis=0), axis=2),  # type: ignore
+    print(velocity2array(velocity_in))
+    result = array2velocity(model.predict(
+        {'image_in': np.expand_dims(np.expand_dims(
+              recent_images, axis=0), axis=2),  # type: ignore
          'target_in': np.expand_dims(  # type: ignore
              velocity2array(target_velocity),
              axis=0),
@@ -264,6 +275,8 @@ def _update_velocity_auto(
              velocity2array(velocity_in),
              axis=0)},
         batch_size=1))
+    # print(result)
+    return result
 
 
 def _update_position(v: Velocity, p: s.Vector, t: float) -> s.Vector:
@@ -447,9 +460,10 @@ def _make_tk_images(small_image):
     It calculates the images from the worldstate and converts them into
     the correct format for displaying in a Tkinter window.
     """
-    return TkImage(image=_numpy_x1_to_TKimage(s.calculate_rgb_images(small_image)),
-                   x=320,
-                   y=110)
+    return TkImage(
+        image=_numpy_x1_to_TKimage(s.calculate_rgb_images(small_image)),
+        x=320,
+        y=110)
 
 
 def world2view(w: WorldState) -> List[TkPicture]:
@@ -466,8 +480,5 @@ def world2view(w: WorldState) -> List[TkPicture]:
                  angle=(w.target_velocity.angle
                         - w.velocity.angle + math.pi/2)),
         'black')
-    obstacles: List[TkPicture] = [
-        _plot_obstacle(_shift_and_centre(o, w.position, w.velocity))
-        for o in w.obstacles]
     image: TkPicture = _make_tk_images(w.thin_view)  # type: ignore
-    return [robot, arrow_actual, arrow_target, image] # + obstacles
+    return [robot, arrow_actual, arrow_target, image]

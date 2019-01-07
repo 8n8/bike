@@ -64,7 +64,7 @@ class CamSpec(TypedDict):
     :param theta: The angle of the camera.
     :param alpha: The global orientation of the centre of the camera
         (the line marked k on the diagram above.
-    """
+    """  # noqa: W605
     position: Vector
     k: float
     theta: float

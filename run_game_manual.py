@@ -14,14 +14,13 @@ initial_image_set: w.ImageSet = {
     'back': blank_image,
     'right': blank_image}
 
+target_velocity = f.Velocity(speed=random.uniform(3, 7), angle=0)
 
 init = f.WorldState(
     crashed=False,
-    velocity=f.Velocity(speed=0, angle=0),
+    velocity=target_velocity,
     position={'x': 0, 'y': 0},
-    target_velocity=f.Velocity(
-        speed=random.uniform(3, 7),
-        angle=0),
+    target_velocity=target_velocity,
     obstacles=[],
     keyboard=f.KeyPress.NONE,
     timestamp=0,
