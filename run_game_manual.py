@@ -1,7 +1,7 @@
 """ It runs the navigation game. """
 
 import random
-import numpy as np
+import numpy as np  # type: ignore
 import game_gui as g
 import game_functions as f
 import world2sensor as w

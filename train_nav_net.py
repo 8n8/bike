@@ -5,7 +5,7 @@ import os
 import conv_net as f
 import game_functions as gf
 from keras.optimizers import Adam  # type: ignore
-import numpy as np
+import numpy as np  # type: ignore
 
 
 DATA_DIR: str = 'game_data'
@@ -46,17 +46,18 @@ def main():
     model = f.main()
     model.compile(
         loss='categorical_crossentropy',
-        optimizer=Adam(lr=0.01),
+        optimizer=Adam(lr=0.04),
         metrics=['accuracy'])
     print('Reading data from files...')
     d = read_numpy_data()
     np.set_printoptions(threshold=np.nan)
-    print(d.velocity_out[100], d.velocity_in[100], d.target_velocity[100])
+    # print(d.velocity_out[:100], d.velocity_in[:100], d.target_velocity[:100])
+    print(d.velocity_out[:100])
     model.fit(
         {'image_in': d.images,
          'velocity_in': d.velocity_in,
          'target_in': d.target_velocity},
         d.velocity_out,
         batch_size=5000,
-        epochs=10)
+        epochs=1)
     model.save(saved_net_file)

@@ -1,5 +1,5 @@
 import game_functions as g
-import numpy as np
+import numpy as np  # type: ignore
 
 # v = g.Velocity(speed=4, angle=0)
 

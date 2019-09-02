@@ -5,7 +5,7 @@ import uuid
 from typing import Callable, List
 import tkinter as k
 from keras.models import load_model  # type: ignore
-import numpy as np
+import numpy as np  # type: ignore
 import update_obstacle_pop as u
 import game_functions as g
 import random

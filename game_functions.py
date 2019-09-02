@@ -9,7 +9,7 @@ needed to plot the world state in the GUI window.
 import enum
 import math
 from typing import List, Tuple, NamedTuple, Any, Union, Callable
-import numpy as np
+import numpy as np  # type: ignore
 from PIL import ImageTk, Image  # type: ignore
 # import game_gui as g
 import update_obstacle_pop as u
@@ -212,22 +212,6 @@ def _update_velocity_manual(key: KeyPress, v: Velocity) -> Velocity:
     return v
 
 
-def i_for_n_seconds_ago(
-        timestamps: 'np.ndarray[np.float64]',
-        n: float,
-        now: float) -> int:
-    """
-    It finds the index of the timestamp that is close to being n
-    seconds ago.
-    """
-    comparison = np.ones_like(timestamps)*(now - n)
-    matching = abs(timestamps - comparison) < 0.1  # type: ignore
-    indices = matching.nonzero()
-    if indices[0].shape[0] == 0:  # i.e., if the list is empty
-        return None
-    return indices[0][0]
-
-
 IMAGE_TIMES: Tuple[float, float, float, float] = (0, 0.5, 1, 1.5)
 
 
@@ -239,13 +223,13 @@ def imageset2numpy(i: s.ImageSet) -> 'np.ndarray[bool]':
 
 
 def make_recent_images(
-        ws: List[WorldState]) -> Tuple[str, 'np.ndarray[bool]']:
+        ws: List[WorldState]) -> 'np.ndarray[bool]':
     """
     It works out the set of recent images for feeding into the neural
     network, given the history of world states.  The output array is of
     shape 100 x 4 x 4.
     """
-    return None, ws[-1].thin_view
+    return ws[-1].thin_view
     # now: float = ws[-1].timestamp
     # timestamps = np.array([w.timestamp for w in ws])
     # i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now)
@@ -331,14 +315,11 @@ def update_world(
     given the current state and some random data for calculating the
     obstacle parameters.
     """
-    err, recent_images = make_recent_images(history)
+    recent_images = make_recent_images(history)
     init = history[-1]
     if mode == Mode.AUTO:
-        if err is None:
-            velocity: Velocity = _update_velocity_auto(
-                init.target_velocity, init.velocity, recent_images, model)
-        else:
-            velocity = init.velocity
+        velocity: Velocity = _update_velocity_auto(
+        init.target_velocity, init.velocity, recent_images, model)
     if mode == Mode.MANUAL:
         velocity = _update_velocity_manual(init.keyboard, init.velocity)
     return (  # type: ignore
