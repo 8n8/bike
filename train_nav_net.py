@@ -2,12 +2,10 @@
 
 from typing import List, Set, Tuple  # noqa: F401
 import os
-import json
 import conv_net as f
 import game_functions as gf
 from keras.optimizers import Adam  # type: ignore
-from keras.models import load_model  # type: ignore
-import numpy as np
+import numpy as np  # type: ignore
 
 
 DATA_DIR: str = 'game_data'
@@ -23,61 +21,43 @@ def read_one_numpy_file(filename: str) -> gf.DataSet:
         velocity_out=dat['arr_3'])
 
 
-def read_numpy_data(
-        used_data_files: List[str],
-        data_file_names: List[str]) -> Tuple[str, List[str], gf.DataSet]:
+def read_numpy_data():
     """
     It reads the training data from file and updates the list of
     used files.
     """
-    setunused: Set[str] = set(data_file_names)
-    setused: Set[str] = set(used_data_files)
-    if (setunused - setused) == set():
-        return "Data used up.", used_data_files, None
-    filename = list(setunused - setused)[0]
-    gathered_data = read_one_numpy_file(DATA_DIR + '/' + filename)
-    used_data_files.append(filename)
-    return None, used_data_files, gathered_data
+    filenames = os.listdir(DATA_DIR)
+    gathered_data = [read_one_numpy_file(DATA_DIR + '/' + filename)
+                     for filename in filenames]
+    images = [g.images for g in gathered_data]
+    target_vs = [g.target_velocity for g in gathered_data]
+    vs_in = [g.velocity_in for g in gathered_data]
+    vs_out = [g.velocity_out for g in gathered_data]
+    return gf.DataSet(
+        images=np.concatenate(images, axis=0),
+        target_velocity=np.concatenate(target_vs, axis=0),
+        velocity_in=np.concatenate(vs_in, axis=0),
+        velocity_out=np.concatenate(vs_out, axis=0))
 
 
 def main():
     """ It trains the neural network using the game data. """
-    data_file_names: List[str] = os.listdir(DATA_DIR)
     saved_net_file: str = 'nav_net.h5'
-    used_file_list: str = 'used_files'
-    if os.path.isfile(used_file_list):
-        with open(used_file_list, 'r') as fff:
-            used_data_files: List[str] = json.load(fff)
-    else:
-        used_data_files: List[str] = []
-    if os.path.isfile(saved_net_file):
-        model = load_model(saved_net_file)
-    else:
-        model = f.main()
-        model.compile(
-            loss='categorical_crossentropy',
-            optimizer=Adam(lr=0.0002),
-            metrics=['accuracy'])
-    training_cycle_num: int = 0
-    for _ in range(10):
-        while True:
-            print('Reading data from files...')
-            err, used_data_files, d = read_numpy_data(used_data_files,
-                                                      data_file_names)
-            if err is not None:
-                print(err)
-                model.save(saved_net_file)
-                with open(used_file_list, 'w') as ff:
-                    json.dump(used_data_files, ff)
-                break
-            print("Training cycle {}".format(training_cycle_num))
-            training_cycle_num += 1
-            model.fit(
-                {'image_in': d.images,
-                 'velocity_in': d.velocity_in,
-                 'target_in': d.target_velocity},
-                d.velocity_out,
-                batch_size=5000,
-                epochs=1)
-        used_data_files = []
-        model.save(saved_net_file)
+    model = f.main()
+    model.compile(
+        loss='categorical_crossentropy',
+        optimizer=Adam(lr=0.04),
+        metrics=['accuracy'])
+    print('Reading data from files...')
+    d = read_numpy_data()
+    np.set_printoptions(threshold=np.nan)
+    # print(d.velocity_out[:100], d.velocity_in[:100], d.target_velocity[:100])
+    print(d.velocity_out[:100])
+    model.fit(
+        {'image_in': d.images,
+         'velocity_in': d.velocity_in,
+         'target_in': d.target_velocity},
+        d.velocity_out,
+        batch_size=5000,
+        epochs=1)
+    model.save(saved_net_file)

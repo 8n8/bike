@@ -6,3 +6,4 @@ __pycache__/
 *.sw*
 .cache/
 used_files
+old_game_data/

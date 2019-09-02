@@ -64,7 +64,7 @@ class CamSpec(TypedDict):
     :param theta: The angle of the camera.
     :param alpha: The global orientation of the centre of the camera
         (the line marked k on the diagram above.
-    """
+    """  # noqa: W605
     position: Vector
     k: float
     theta: float
@@ -233,11 +233,8 @@ def _thin_image_to_thick(
     RGB image.  Ones are white, zeros are black.  The original array
     is stretched vertically.
     """
-    # The transpose operation is necessary because when later this
-    # Numpy array is viewed as an image it comes out rotated by 90
-    # degrees without it.
     with_height = np.stack(  # type: ignore
-        (thin_im for _ in range(100)), axis=1).T
+        (thin_im for _ in range(100)), axis=0)
     with_rgb = np.stack(  # type: ignore
         (with_height for _ in range(3)), axis=2)
     as_uint8 = with_rgb.astype(np.uint8)

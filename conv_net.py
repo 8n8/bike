@@ -4,39 +4,39 @@
 import keras as k  # type: ignore
 
 
-conv1 = k.layers.convolutional.Conv2D(
+conv1 = k.layers.convolutional.Conv1D(
+    6,
+    5,
+    strides=(2, 2),
+    padding='same',
+    activation='relu')
+
+
+conv2 = k.layers.convolutional.Conv1D(
+    10,
+    5,
+    strides=(2, 2),
+    padding='same',
+    activation='relu')
+
+
+conv3 = k.layers.convolutional.Conv1D(
+    10,
+    5,
+    strides=(2, 2),
+    padding='same',
+    activation='relu')
+
+
+conv4 = k.layers.convolutional.Conv1D(
+    10,
     3,
-    5,
-    strides=(2, 2),
     padding='same',
     activation='relu')
 
 
-conv2 = k.layers.convolutional.Conv2D(
-    5,
-    5,
-    strides=(2, 2),
-    padding='same',
-    activation='relu')
-
-
-conv3 = k.layers.convolutional.Conv2D(
-    5,
-    5,
-    strides=(2, 2),
-    padding='same',
-    activation='relu')
-
-
-conv4 = k.layers.convolutional.Conv2D(
-    5,
-    3,
-    padding='same',
-    activation='relu')
-
-
-conv5 = k.layers.convolutional.Conv2D(
-    5,
+conv5 = k.layers.convolutional.Conv1D(
+    10,
     3,
     padding='same',
     activation='relu')

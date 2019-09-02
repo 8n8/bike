@@ -2,7 +2,7 @@
 
 import time
 import conv_net
-import numpy as np
+import numpy as np  # type: ignore
 
 num = 100
 

@@ -1,7 +1,7 @@
 """ It runs the navigation game. """
 
 import random
-import numpy as np
+import numpy as np  # type: ignore
 import game_gui as g
 import game_functions as f
 import world2sensor as w
@@ -14,14 +14,13 @@ initial_image_set: w.ImageSet = {
     'back': blank_image,
     'right': blank_image}
 
+target_velocity = f.Velocity(speed=random.uniform(3, 7), angle=0)
 
 init = f.WorldState(
     crashed=False,
-    velocity=f.Velocity(speed=0, angle=0),
+    velocity=target_velocity,
     position={'x': 0, 'y': 0},
-    target_velocity=f.Velocity(
-        speed=random.uniform(3, 7),
-        angle=0),
+    target_velocity=target_velocity,
     obstacles=[],
     keyboard=f.KeyPress.NONE,
     timestamp=0,
