@@ -14,17 +14,16 @@ The final part of the program is an automatic player of the game, using the trai
 
 # Installation
 
-This installation should work in Ubuntu Linux 18.04.1 LTS.  I didn't actually start with a clean Ubuntu install, so you might find that there is something you need that is not mentioned here.  It shouldn't be too hard to work out though.
+This installation should work in Ubuntu Linux 18.04.1 LTS.  I didn't actually start with a clean Ubuntu install, so you might find that there is something you need that is not mentioned here.
 
-1. You will need Python 3.6.  It is likely already installed - check with the command ```python3.6 --version```.
-2. Install tk for the GUI - the game uses Tkinter.  This is available in Ubuntu with ```sudo apt install tk```.
-3. Check that pip (the Python package manager) is installed with ```pip3 --version```.  (Don't forget the '3' after pip, because you need the version for Python 3, not Python 2.)  If not, install it with ```sudo apt install python3-pip```.
-4. Install virtualenv with ```pip3 install virtualenv```.  (Used for isolating project dependencies, so you don't have to mess with the global Python packages to get something to run.)
+1. Install ```tk-dev``` (for Tkinter GUI): ```sudo apt install tk-dev```. It's important to do this before installing Python with Pyenv.
+2. Install Pyenv with [these instructions](https://github.com/pyenv/pyenv#installation). Pyenv allows you to install local versions of Python for specific projects, without messing up global Python installations. In short, do ```curl https://pyenv.run | bash```.
 1. Clone this repository with ```git clone https://github.com/8n8/bike.git``` and ```cd``` into it.
-5. Set up a new virtual environment for the project with ```python3.6 -m virtualenv venv```.
-6. Enter the virtual environment with ```source venv/bin/activate```.
-7. Install the dependencies with ```pip install -r requirements.txt```.
-8. If you wish, run the tests with ```pytest```.
+3. Install a local (to this directory) version of Python 3.7.4 with ```pyenv install 3.7.4```.
+3. Check that pip (the Python package manager) is installed with ```pip3 --version```.  (Don't forget the '3' after pip, because you need the version for Python 3, not Python 2.)  If not, install it with ```sudo apt install python3-pip```.
+4. Install Pipenv to manage the dependencies. If you have Pip installed for Python 3, do ```pip3 install --user pipenv```.
+5. Install the dependencies with ```pipenv install```.
+6. Enter the Pipenv shell (this makes the Python environment we have just set up available) with ```pipenv shell```.
 
 # Playing the game
 

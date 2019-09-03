@@ -7,3 +7,4 @@ __pycache__/
 .cache/
 used_files
 old_game_data/
+.python-version

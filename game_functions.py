@@ -229,18 +229,18 @@ def make_recent_images(
     network, given the history of world states.  The output array is of
     shape 100 x 4 x 4.
     """
-<<<<<<< HEAD
-    now: float = ws[-1].timestamp
-    timestamps = np.array([w.timestamp for w in ws])
-    i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now)
-                      for t in IMAGE_TIMES]
-    nones: List[bool] = [i is None for i in i_s]
-    if any(nones):
-        return "Not possible to make this batch.", None
-    batch: List['np.ndarray[bool]'] = [
-        imageset2numpy(ws[i].thin_view) for i in i_s]
-    return None, np.stack(batch, axis=2)  # type: ignore
-=======
+    # <<<<<<< HEAD
+    #     now: float = ws[-1].timestamp
+    #     timestamps = np.array([w.timestamp for w in ws])
+    #     i_s: List[int] = [i_for_n_seconds_ago(timestamps, t, now)
+    #                       for t in IMAGE_TIMES]
+    #     nones: List[bool] = [i is None for i in i_s]
+    #     if any(nones):
+    #         return "Not possible to make this batch.", None
+    #     batch: List['np.ndarray[bool]'] = [
+    #         imageset2numpy(ws[i].thin_view) for i in i_s]
+    #     return None, np.stack(batch, axis=2)  # type: ignore
+    # =======
     return ws[-1].thin_view
     # now: float = ws[-1].timestamp
     # timestamps = np.array([w.timestamp for w in ws])
@@ -252,7 +252,6 @@ def make_recent_images(
     # batch: List['np.ndarray[bool]'] = [
     #     imageset2numpy(ws[i].thin_view) for i in i_s]
     # return None, np.stack(batch, axis=2)  # type: ignore
->>>>>>> simpler
 
 
 def _update_velocity_auto(
@@ -467,19 +466,18 @@ def _make_tk_images(small_images: s.ImageSet) -> List[TkImage]:
     It calculates the images from the worldstate and converts them into
     the correct format for displaying in a Tkinter window.
     """
-<<<<<<< HEAD
-    images = _numpy_x4_to_TKimage(s.calculate_rgb_images(small_images))
-    return [
-        TkImage(image=images['front'], x=320, y=110),
-        TkImage(image=images['back'], x=320, y=330),
-        TkImage(image=images['left'], x=110, y=220),
-        TkImage(image=images['right'], x=530, y=220)]
-=======
+    # <<<<<<< HEAD
+    #     images = _numpy_x4_to_TKimage(s.calculate_rgb_images(small_images))
+    #     return [
+    #         TkImage(image=images['front'], x=320, y=110),
+    #         TkImage(image=images['back'], x=320, y=330),
+    #         TkImage(image=images['left'], x=110, y=220),
+    #         TkImage(image=images['right'], x=530, y=220)]
+    # =======
     return TkImage(
-        image=_numpy_x1_to_TKimage(s.calculate_rgb_images(small_image)),
+        image=_numpy_x1_to_TKimage(s.calculate_rgb_images(small_images)['front']),
         x=320,
         y=110)
->>>>>>> simpler
 
 
 def world2view(w: WorldState) -> List[TkPicture]:
@@ -496,13 +494,12 @@ def world2view(w: WorldState) -> List[TkPicture]:
                  angle=(w.target_velocity.angle
                         - w.velocity.angle + math.pi/2)),
         'black')
-<<<<<<< HEAD
-    obstacles: List[TkPicture] = [
-        _plot_obstacle(_shift_and_centre(o, w.position, w.velocity))
-        for o in w.obstacles]
-    images: List[TkPicture] = _make_tk_images(w.thin_view)  # type: ignore
-    return [robot, arrow_actual, arrow_target] + images # + obstacles
-=======
+    # <<<<<<< HEAD
+    #     obstacles: List[TkPicture] = [
+    #         _plot_obstacle(_shift_and_centre(o, w.position, w.velocity))
+    #         for o in w.obstacles]
+    #     images: List[TkPicture] = _make_tk_images(w.thin_view)  # type: ignore
+    #     return [robot, arrow_actual, arrow_target] + images # + obstacles
+    # =======
     image: TkPicture = _make_tk_images(w.thin_view)  # type: ignore
     return [robot, arrow_actual, arrow_target, image]
->>>>>>> simpler
