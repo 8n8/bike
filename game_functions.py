@@ -466,40 +466,17 @@ def _make_tk_images(small_images: s.ImageSet) -> List[TkImage]:
     It calculates the images from the worldstate and converts them into
     the correct format for displaying in a Tkinter window.
     """
-    # <<<<<<< HEAD
-    #     images = _numpy_x4_to_TKimage(s.calculate_rgb_images(small_images))
-    #     return [
-    #         TkImage(image=images['front'], x=320, y=110),
-    #         TkImage(image=images['back'], x=320, y=330),
-    #         TkImage(image=images['left'], x=110, y=220),
-    #         TkImage(image=images['right'], x=530, y=220)]
-    # =======
     return TkImage(
-        image=_numpy_x1_to_TKimage(s.calculate_rgb_images(small_images)['front']),
+        image=_numpy_x1_to_TKimage(
+            s.calculate_rgb_images(small_images)['front']),
         x=320,
         y=110)
 
 
-def world2view(w: WorldState) -> List[TkPicture]:
+def world2view(w: WorldState) -> TkImage:
     """
     It works out how to make the view in the Tkinter window, given the
     state of the world.
     """
-    robot: TkPicture = _circle(XOFFSET, YOFFSET, SCALE * 1.2, 'red')
-    arrow_actual: TkPicture = _arrow(
-        Velocity(speed=w.velocity.speed, angle=math.pi/2),
-        'red')
-    arrow_target: TkPicture = _arrow(
-        Velocity(speed=w.target_velocity.speed,
-                 angle=(w.target_velocity.angle
-                        - w.velocity.angle + math.pi/2)),
-        'black')
-    # <<<<<<< HEAD
-    #     obstacles: List[TkPicture] = [
-    #         _plot_obstacle(_shift_and_centre(o, w.position, w.velocity))
-    #         for o in w.obstacles]
-    #     images: List[TkPicture] = _make_tk_images(w.thin_view)  # type: ignore
-    #     return [robot, arrow_actual, arrow_target] + images # + obstacles
-    # =======
     image: TkPicture = _make_tk_images(w.thin_view)  # type: ignore
-    return [robot, arrow_actual, arrow_target, image]
+    return image

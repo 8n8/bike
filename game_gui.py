@@ -44,29 +44,10 @@ class _World:
             print('Robot has crashed into obstacle.')
             return
         self.canvas.delete('all')
-        for i in self.world2view(self.state):
-            if isinstance(i, g.TkOval):
-                self.canvas.create_oval(
-                    i.top_left_x,
-                    i.top_left_y,
-                    i.bottom_right_x,
-                    i.bottom_right_y,
-                    fill=i.fill_colour)
-                continue
-            if isinstance(i, g.TkArrow):
-                self.canvas.create_line(
-                    i.start_x,
-                    i.start_y,
-                    i.stop_x,
-                    i.stop_y,
-                    arrow=k.LAST,
-                    fill=i.colour,
-                    width=i.width)
-                continue
-            if isinstance(i, g.TkImage):
-                self.canvas.create_image(i.x, i.y, image=i.image)
-                self.imref.append(i.image)
-                self.imref = self.imref[-4:]
+        i = self.world2view(self.state)
+        self.canvas.create_image(100, 100, image=i.image)
+        self.imref.append(i.image)
+        self.imref = self.imref[-4:]
         self.history.append(self.state)
         recent_images, self.state = self.update_world(
             self.history,
@@ -130,8 +111,8 @@ def main(
     """
     root = k.Tk()
     root.title('Robot navigation simulator')
-    root.geometry('650x750')
-    canvas = k.Canvas(root, width=650, height=750, bg='grey')
+    root.geometry('200x200')
+    canvas = k.Canvas(root, width=200, height=200, bg='grey')
     canvas.pack()
 
     world = _World(canvas, init, timestep, update_world, world2view)
