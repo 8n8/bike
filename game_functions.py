@@ -439,17 +439,13 @@ def _shift_and_centre(
         'radius': o['radius']}
 
 
-def image_resize():
-    return 500
-
-
 def _numpy_x1_to_TKimage(image: 'np.ndarray[np.uint8]'):
     """
     It converts a single numpy array into an image in the right format for
     displaying in Tkinter.
     """
     return ImageTk.PhotoImage(
-        Image.fromarray(image).resize((image_resize(), image_resize()), Image.ANTIALIAS))
+        Image.fromarray(image).resize((500, 500), Image.ANTIALIAS))
 
 
 def _numpy_x4_to_TKimage(i: s.ImageSet):
