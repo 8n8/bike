@@ -27,7 +27,8 @@ class _World:
             init: g.WorldState,
             timestep: float,
             update_world: g.UpdateWorld,
-            world2view: Callable[[g.WorldState], List[g.TkPicture]]) -> None:
+            world2view: Callable[[g.WorldState], List[g.TkPicture]]):
+
         self.state = init
         self.canvas = canvas
         self.timestep = timestep
@@ -45,7 +46,7 @@ class _World:
             return
         self.canvas.delete('all')
         i = self.world2view(self.state)
-        self.canvas.create_image(100, 100, image=i.image)
+        self.canvas.create_image(250, 250, image=i.image)
         self.imref.append(i.image)
         self.imref = self.imref[-4:]
         self.history.append(self.state)
@@ -87,7 +88,8 @@ class _World:
             timestamp=self.state.timestamp,
             thin_view=self.state.thin_view)
         filename: str = 'game_data/' + str(uuid.uuid4())
-        dat: g.DataSet = g.prepare_for_save(self.recent_images, self.history)
+        dat: g.DataSet = g.prepare_for_save(
+                self.recent_images, self.history)
         np.savez(filename, dat.images, dat.target_velocity,
                  dat.velocity_in, dat.velocity_out)
 
@@ -96,7 +98,7 @@ def main(
         init: g.WorldState,
         timestep: float,
         update_world: g.UpdateWorld,
-        world2view: Callable[[g.WorldState], List[g.TkPicture]]) -> None:
+        world2view: Callable[[g.WorldState], List[g.TkPicture]]):
     """
     It creates a GUI window with moving objects in it.
 
@@ -111,8 +113,8 @@ def main(
     """
     root = k.Tk()
     root.title('Robot navigation simulator')
-    root.geometry('200x200')
-    canvas = k.Canvas(root, width=200, height=200, bg='grey')
+    root.geometry('500x500')
+    canvas = k.Canvas(root, width=500, height=500, bg='grey')
     canvas.pack()
 
     world = _World(canvas, init, timestep, update_world, world2view)

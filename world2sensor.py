@@ -226,6 +226,9 @@ def _image_of_all_visible_obstacles(
     return _make_thin_composite_image(image_parameter_list_no_errs)
 
 
+IMAGE_SIZE = 200
+
+
 def _thin_image_to_thick(
         thin_im: 'np.ndarray[bool]') -> 'np.ndarray[np.uint8]':
     """
@@ -234,7 +237,7 @@ def _thin_image_to_thick(
     is stretched vertically.
     """
     with_height = np.stack(  # type: ignore
-        (thin_im for _ in range(100)), axis=0)
+        (thin_im for _ in range(IMAGE_SIZE)), axis=0)
     with_rgb = np.stack(  # type: ignore
         (with_height for _ in range(3)), axis=2)
     as_uint8 = with_rgb.astype(np.uint8)
@@ -254,7 +257,7 @@ def _make_thin_composite_image(
     width of the obstacle.  The resulting array contains ones for clear
     space and zeros for obstacles.
     """
-    im: 'np.ndarray[bool]' = np.ones(100, dtype=bool)
+    im: 'np.ndarray[bool]' = np.ones(IMAGE_SIZE, dtype=bool)
     for i in image_parameter_list:
         im = im * _make_thin_image(i['x'], i['y'])  # type: ignore
     return im
@@ -272,7 +275,7 @@ def _make_thin_image(x: float, y: float) -> 'np.ndarray[bool]':
     return np.concatenate((  # type: ignore
         np.ones(x, dtype=bool),  # type: ignore
         np.zeros(y, dtype=bool),  # type: ignore
-        np.ones(100 - x - y, dtype=bool)))  # type: ignore
+        np.ones(IMAGE_SIZE - x - y, dtype=bool)))  # type: ignore
 
 
 def _rounded_image_parameters(
@@ -286,7 +289,7 @@ def _rounded_image_parameters(
         It normalises the image parameter to be a number between 0 and
         100.
         """
-        return int(a * 100 / z)
+        return int(a * IMAGE_SIZE / z)
 
     err, parameters = _obstacle_image_parameters(cam, obs)
     if err is not None:
@@ -332,7 +335,7 @@ def _obstacle_image_parameters(
     if B <= A and A <= D and D <= C:
         return (None, {
             'x': 0,
-            'y': 100})
+            'y': IMAGE_SIZE})
     if A <= B and B <= D and D <= C:
         return (None, {
             'x': B - A,
